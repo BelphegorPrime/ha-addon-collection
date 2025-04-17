@@ -1,0 +1,7 @@
+users:
+  "{{.email}}":
+    password: "{{.password_hash}}"
+    displayname: "Admin"
+    email: "{{.email}}"
+    groups:
+      - admins

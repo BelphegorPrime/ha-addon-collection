@@ -1,0 +1,31 @@
+name: "Authelia"
+description: "Authelia add-on!"
+version: "4.38.19"
+slug: "addon_authelia"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+map:
+  - type: share
+    read_only: False
+  - type: data
+    read_only: False
+options:
+  "Admin User Email": "admin@exmaple.com"
+  Domain: "example.com"
+  Password: "authelia"
+  "JWT Secret": "a_very_important_secret"
+  "Session Secret": "session_giberish_aslkjdhgio_secret"
+  "Storage Encryption Key": "storage_giberish_aslkjdhgio_encryption_key"
+schema:
+  "Admin User Email": "str"
+  Domain: "str"
+  Password: "str"
+  "JWT Secret": "str"
+  "Session Secret": "str"
+  "Storage Encryption Key": "str"
+#image: "authelia/authelia"
+ports:
+  9091/tcp: 9091

@@ -1,0 +1,43 @@
+theme: light
+
+server:
+  address: "tcp://0.0.0.0:9091"
+
+log:
+  level: debug
+
+identity_validation:
+  reset_password:
+    jwt_secret: "{{.jwt_secret}}"
+
+totp:
+  disable: true
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+
+access_control:
+  default_policy: one_factor
+  rules:
+    - domain: "*.{{.domain}}"
+      policy: one_factor
+
+session:
+  name: authelia_session
+  secret: "{{.session_secret}}"
+  expiration: 1h
+  inactivity: 5m
+  cookies:
+    - name: authelia_session
+      domain: "{{.domain}}"
+      authelia_url: https://auth.{{.domain}}
+
+storage:
+  encryption_key: "{{.storage_encryption_key}}"
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: "/config/notification.txt"
