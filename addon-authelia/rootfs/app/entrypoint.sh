@@ -26,11 +26,16 @@ password_hash="${password_hash:8}"
 declare json_string
 json_string="{\"email\": \"${email}\", \"domain\": \"${domain}\", \"password\": \"${password}\", \"password_hash\": \"${password_hash}\", \"jwt_secret\": \"${jwt_secret}\", \"session_secret\": \"${session_secret}\", \"storage_encryption_key\": \"${storage_encryption_key}\"}"
 
+# render authelia config related files 
 echo "${json_string}" | tempio -template /templates/configuration_template.yml -out /config/configuration.yml
 echo "${json_string}" | tempio -template /templates/users_database_template.yml -out /config/users_database.yml
-echo "${json_string}" | tempio -template /templates/authelia-location_template.conf -out /snippets/authelia-location.conf
 
-cp -R /snippets /share/nginx_snippets
+# render nginx snippet config files 
+echo "${json_string}" | tempio -template /templates/authelia-location_template.conf -out /snippets/authelia-location.conf
+echo "${json_string}" | tempio -template /templates/authelia-authrequest_template.conf -out /snippets/authelia-authrequest.conf
+
+mkdir -p /share/nginx_snippets
+cp -R /snippets/* /share/nginx_snippets/
 
 echo "Starting Authelia"
 exec authelia "${@}"
