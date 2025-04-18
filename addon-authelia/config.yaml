@@ -26,6 +26,5 @@ schema:
   "JWT Secret": "str"
   "Session Secret": "str"
   "Storage Encryption Key": "str"
-#image: "authelia/authelia"
 ports:
   9091/tcp: 9091
