@@ -13,12 +13,15 @@ map:
   - type: data
     read_only: False
 options:
-  "Admin User Email": "admin@exmaple.com"
+  "Admin User Email": "admin@example.com"
   Domain: "example.com"
   Password: "authelia"
   "JWT Secret": "a_very_important_secret"
   "Session Secret": "session_giberish_aslkjdhgio_secret"
   "Storage Encryption Key": "storage_giberish_aslkjdhgio_encryption_key"
+  Logins:
+    - email: user@example.com
+      password: "123456"
 schema:
   "Admin User Email": "str"
   Domain: "str"
@@ -26,5 +29,8 @@ schema:
   "JWT Secret": "str"
   "Session Secret": "str"
   "Storage Encryption Key": "str"
+  Logins:
+    - email: str
+      password: str
 ports:
   9091/tcp: 9091

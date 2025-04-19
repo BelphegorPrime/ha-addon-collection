@@ -3,15 +3,6 @@
 echo "Starting Authelia Add-on..."
 echo "Creating configurations from provided user configuration..."
 
-# Declare variables
-declare email
-declare domain
-declare password
-declare jwt_secret
-declare session_secret
-declare storage_encryption_key
-declare password_hash
-
 # Read configuration into variables
 email=$(bashio::config '["Admin User Email"]')
 domain=$(bashio::config 'Domain')
@@ -20,11 +11,42 @@ jwt_secret=$(bashio::config '["JWT Secret"]')
 session_secret=$(bashio::config '["Session Secret"]')
 storage_encryption_key=$(bashio::config '["Storage Encryption Key"]')
 
+# Generate admin hash
 password_hash=$(authelia crypto hash generate argon2 --password "${password}")
 password_hash="${password_hash:8}"
 
-declare json_string
-json_string="{\"email\": \"${email}\", \"domain\": \"${domain}\", \"password\": \"${password}\", \"password_hash\": \"${password_hash}\", \"jwt_secret\": \"${jwt_secret}\", \"session_secret\": \"${session_secret}\", \"storage_encryption_key\": \"${storage_encryption_key}\"}"
+# build login data and calculate hashes
+logins_json=$(jq -nc '[inputs]' < <(
+  jq -c '.["Logins"][]' /data/options.json | while read -r l; do 
+    e=$(echo "$l" | jq -r .email)
+    tpw=$(echo "$l" | jq -r .password)
+    pwh=$(authelia crypto hash generate argon2 --password "${tpw}")
+    pwh="${pwh:8}"
+    jq -n --arg email "$e" --arg password_hash "$pwh" \
+      '{email: $email, password_hash: $password_hash}'
+  done
+))
+
+# Build final JSON object with structured logins
+json_string=$(jq -n \
+  --arg email "$email" \
+  --arg domain "$domain" \
+  --arg password "$password" \
+  --arg password_hash "$password_hash" \
+  --arg jwt_secret "$jwt_secret" \
+  --arg session_secret "$session_secret" \
+  --arg storage_encryption_key "$storage_encryption_key" \
+  --argjson logins "$logins_json" \
+  '{
+    email: $email,
+    domain: $domain,
+    password: $password,
+    password_hash: $password_hash,
+    jwt_secret: $jwt_secret,
+    session_secret: $session_secret,
+    storage_encryption_key: $storage_encryption_key,
+    logins: $logins
+  }')
 
 # render authelia config related files 
 echo "${json_string}" | tempio -template /templates/configuration_template.yml -out /config/configuration.yml

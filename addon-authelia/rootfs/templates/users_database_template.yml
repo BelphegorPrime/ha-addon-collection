@@ -5,3 +5,15 @@ users:
     email: "{{.email}}"
     groups:
       - admins
+{{ if .logins }}
+{{- range $index, $element := .logins }}
+  "{{$element.email}}":
+    password: "{{$element.password_hash}}"
+    displayname: "{{$element.email}}"
+    email: "{{$element.email}}"
+    groups:
+      - users
+{{- end }}
+{{ else }}
+# no logins provided
+{{ end }}
