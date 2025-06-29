@@ -1,0 +1,24 @@
+name: "Boomberman"
+description: "Boomberman add-on!"
+version: "0.1.0"
+slug: "addon_boomberman"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+map:
+  - type: share
+    read_only: False
+  - type: data
+    read_only: False
+options:
+  "AI Enabled": false
+  "Ollama URL": "http://<ollama-url-ip>:11434"
+  "Ollama model": "llama3.2"
+schema:
+  "AI Enabled": "bool"
+  "Ollama URL": "str"
+  "Ollama model": "str"
+ports:
+  9092/tcp: 9092

@@ -1,12 +1,10 @@
-# addon-authelia
+# ha-addon-collection
 
-Authelia - Home Assistant Community Add-ons
-
-# Authelia Home Assistant add-on repository
+# Home Assistant add-on collection repository
 
 Add-on documentation: <https://developers.home-assistant.io/docs/add-ons>
 
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FBelphegorPrime%2Faddon-authelia)
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FBelphegorPrime%2Fha-addon-collection)
 
 ## Add-ons
 
@@ -17,6 +15,11 @@ This repository contains the following add-ons
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]
 ![Supports armv7 Architecture][armv7-shield]
+
+### Boomberman add-on
+
+![Supports aarch64 Architecture][aarch64-shield]
+![Supports amd64 Architecture][amd64-shield]
 
 <!--
 
