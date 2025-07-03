@@ -31,7 +31,7 @@ json_string=$(jq -n \
 echo "${json_string}" | tempio -template /templates/.env_template -out /.env
 cp /.env /app/.env
 
-cp /fakeResponses.json $SHARE_DATA_PATH/fakeResponses.json
+cp /fakeResponses.jsonl $SHARE_DATA_PATH/fakeResponses.jsonl
 
 . /app/.env
 
