@@ -9,8 +9,6 @@ mkdir -p $SHARE_DATA_PATH
 
 CONFIG_PATH=/data/options.json
 
-cp $CONFIG_PATH $SHARE_DATA_PATH/options.json
-
 # Read configuration into variables
 ai_enabled=$(jq --raw-output '.["AI Enabled"]' $CONFIG_PATH)
 ollama_url=$(jq --raw-output '.["Ollama URL"]' $CONFIG_PATH)
