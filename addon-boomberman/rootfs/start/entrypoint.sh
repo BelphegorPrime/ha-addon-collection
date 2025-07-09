@@ -1,11 +1,20 @@
 #! /bin/bash
 
 echo "Starting Boomberman Add-on..."
-echo "Creating configurations from provided user configuration..."
 
 SHARE_DATA_PATH=/share/boomberman/data
 
 mkdir -p $SHARE_DATA_PATH
+
+if [ ! -f "$SHARE_DATA_PATH/10G.gzip" ]; then
+  echo "Creating some gzip files. That can take some minutes"
+  dd if=/dev/zero bs=1M count=10240 | gzip > $SHARE_DATA_PATH/10G.gzip
+  echo "Finished creating some gzip files"
+fi
+
+echo "Creating configurations from provided user configuration..."
+
+cp $SHARE_DATA_PATH/10G.gzip /app/public/10G.gzip
 
 CONFIG_PATH=/data/options.json
 
