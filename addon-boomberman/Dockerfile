@@ -1,5 +1,5 @@
 ARG BUILD_FROM=ghcr.io/belphegorprime/boomberman
-FROM ${BUILD_FROM}
+FROM ${BUILD_FROM}:${BUILD_VERSION}
 
 ARG BUILD_ARCH=amd64
 ARG BASHIO_VERSION="v0.17.0"
