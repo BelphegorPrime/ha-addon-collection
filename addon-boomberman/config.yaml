@@ -1,6 +1,6 @@
 name: "Boomberman"
 description: "Boomberman add-on!"
-version: "0.1.11"
+version: "0.1.12"
 slug: "addon_boomberman"
 arch:
   - aarch64
