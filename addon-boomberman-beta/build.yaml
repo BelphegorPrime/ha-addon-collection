@@ -1,6 +1,6 @@
 build_from:
-  aarch64: ghcr.io/belphegorprime/boomberman:beta
-  amd64: ghcr.io/belphegorprime/boomberman:beta
+  aarch64: ghcr.io/belphegorprime/boomberman
+  amd64: ghcr.io/belphegorprime/boomberman
 labels:
   org.opencontainers.image.title: "Home Assistant Add-on: Boomberman add-on (Beta)"
   org.opencontainers.image.description: "Boomberman add-on - Beta release candidate version"

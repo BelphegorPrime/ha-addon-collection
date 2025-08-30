@@ -1,6 +1,6 @@
 name: "Boomberman Alpha"
 description: "Boomberman add-on (Alpha Version) - Development builds for testing new features"
-version: "0.1.12-alpha"
+version: "0.2.0"
 slug: "addon_boomberman_alpha"
 arch:
   - aarch64

@@ -1,6 +1,6 @@
 name: "Boomberman Beta"
 description: "Boomberman add-on (Beta Version) - Release candidate builds for final testing"
-version: "0.1.12-beta"
+version: "0.2.0"
 slug: "addon_boomberman_beta"
 arch:
   - aarch64
