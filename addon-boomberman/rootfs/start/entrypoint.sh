@@ -18,21 +18,9 @@ cp $SHARE_DATA_PATH/10G.gzip /app/public/10G.gzip
 
 CONFIG_PATH=/data/options.json
 
-# Read configuration into variables
-ai_enabled=$(jq --raw-output '.["AI Enabled"]' $CONFIG_PATH)
-ollama_url=$(jq --raw-output '.["Ollama URL"]' $CONFIG_PATH)
-ollama_model=$(jq --raw-output '.["Ollama model"]' $CONFIG_PATH)
-
-# Build final JSON object with structured logins
-json_string=$(jq -n \
-  --arg ai_enabled "$ai_enabled" \
-  --arg ollama_url "$ollama_url" \
-  --arg ollama_model "$ollama_model" \
-  '{
-    ai_enabled: $ai_enabled,
-    ollama_url: $ollama_url,
-    ollama_model: $ollama_model,
-  }')
+# Generic configuration processing - automatically converts all Home Assistant options
+# to template variables by converting spaces to underscores and making lowercase
+json_string=$(jq 'to_entries | map({key: (.key | gsub(" "; "_") | ascii_downcase), value: .value}) | from_entries' $CONFIG_PATH)
 
 # render .env file config related files 
 echo "${json_string}" | tempio -template /templates/.env_template -out /.env
