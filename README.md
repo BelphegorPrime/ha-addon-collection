@@ -20,6 +20,56 @@ This repository contains the following add-ons
 
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]
+![Supports armv7 Architecture][armv7-shield]
+
+## Boomberman Add-on Versions
+
+This repository provides three versions of the Boomberman add-on to meet different user needs:
+
+### 🟢 Boomberman (Production/Stable)
+- **Recommended for production use**
+- Latest stable release with full testing and validation
+- Updated only with stable releases
+- Most reliable version for everyday use
+- Full feature set with proven stability
+
+### 🟡 Boomberman Beta (Release Candidate)
+- **For advanced users wanting early access**
+- Pre-release version for final testing before stable release
+- Contains features planned for the next stable release
+- More stable than alpha but may contain minor issues
+- Recommended for users who want to test upcoming features
+
+### 🔴 Boomberman Alpha (Development)
+- **For testing and development purposes only**
+- Development builds with the latest experimental features
+- Frequent updates from active development branches
+- May contain bugs, incomplete features, or breaking changes
+- Only recommended for developers and testers
+
+### Installation Instructions
+
+1. Add this repository to your Home Assistant add-on store using the button above
+2. Browse the available add-ons and choose the appropriate Boomberman version:
+   - **Production**: For stable, everyday use
+   - **Beta**: For early access to upcoming features (some risk)
+   - **Alpha**: For testing latest developments (high risk)
+
+### Architecture Support
+
+All Boomberman versions support the same architectures:
+- **aarch64** (ARM 64-bit) - Raspberry Pi 4, etc.
+- **amd64** (x86 64-bit) - Intel/AMD processors
+- **armv7** (ARM 32-bit) - Raspberry Pi 3, etc.
+
+### Version Selection Guide
+
+| Use Case             | Recommended Version | Risk Level |
+| -------------------- | ------------------- | ---------- |
+| Home production use  | **Production**      | Low        |
+| Testing new features | **Beta**            | Medium     |
+| Development/Testing  | **Alpha**           | High       |
+| First-time users     | **Production**      | Low        |
 
 <!--
 

@@ -26,7 +26,7 @@
   - Update build.yaml to reference beta image tags
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 5. Update repository configuration for multiple add-ons
+- [x] 5. Update repository configuration for multiple add-ons
   - Update repository.yml to include all three add-on versions
   - Ensure proper naming and descriptions for each version
   - Configure appropriate architecture support for each version
