@@ -19,7 +19,7 @@
   - Update build.yaml to reference alpha image tags
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [-] 4. Create beta version add-on configuration
+- [x] 4. Create beta version add-on configuration
   - Create addon-boomberman-beta directory with separate config.yaml
   - Configure beta version to use beta Docker images from base repository
   - Set appropriate version numbering for beta releases
