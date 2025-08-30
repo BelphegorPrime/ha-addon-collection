@@ -1,62 +1,204 @@
-# Home Assistant Add-on: Boomberman Beta
+# Boomberman Beta Add-on Documentation
 
-## About
+## ⚠️ IMPORTANT: Beta Version Notice
 
-This is the **Beta version** of the Boomberman add-on. Beta versions are release candidates that contain the latest stable features and have undergone more testing than alpha versions, but may still contain minor issues.
+**This is a BETA version of the Boomberman add-on intended for pre-release testing and early access to new features.**
 
-⚠️ **Warning**: This is a pre-release version intended for final testing before production release. While more stable than alpha versions, use with caution in production environments.
+- ⚠️ **Use with caution in production environments**
+- ⚠️ **May contain minor bugs or incomplete features**
+- ⚠️ **Features are near-complete but not fully validated**
+- ✅ **More stable than alpha versions**
+- ✅ **Access to upcoming features before general release**
+- ✅ **Suitable for advanced users and testers**
 
-## Installation
+## Version Differences
 
-1. Navigate to the Home Assistant Add-on Store
-2. Add this repository if you haven't already
-3. Find "Boomberman Beta" in the add-on list
-4. Click "Install"
-5. Configure the add-on options as needed
-6. Start the add-on
+### Beta vs Alpha vs Production
 
-## Configuration
+| Feature                  | Alpha        | Beta              | Production |
+| ------------------------ | ------------ | ----------------- | ---------- |
+| **Stability**            | Experimental | Release Candidate | Stable     |
+| **Update Frequency**     | Very High    | Medium            | Low        |
+| **Bug Risk**             | High         | Medium            | Low        |
+| **Feature Completeness** | Partial      | Near Complete     | Complete   |
+| **Production Ready**     | No           | Caution           | Yes        |
+| **Support Level**        | Community    | Limited           | Full       |
+| **Testing Level**        | Minimal      | Extensive         | Complete   |
 
-The beta version includes all the latest stable configuration options:
+### What's Different in Beta
 
-### Basic Options
-- **AI Enabled**: Enable or disable AI features
-- **Ollama URL**: URL to your Ollama instance
-- **Ollama model**: AI model to use
+- **Release Candidate Features**: Features planned for the next stable release
+- **Enhanced Bot Detection**: Improved algorithms with better accuracy
+- **Advanced Configuration**: More granular control over security settings
+- **Stability Focus**: Fewer experimental changes, more focus on reliability
+- **Pre-release Testing**: Extensive testing before promotion to production
 
-### Bot Detection (Enhanced)
-- **Bot Detection Enabled**: Enable enhanced bot detection
-- **Bot Detection Threshold Suspicious**: Threshold for suspicious activity (0-100)
-- **Bot Detection Threshold High Risk**: Threshold for high-risk activity (0-100)
-- **High Risk Countries**: Comma-separated list of country codes
-- **VPN Penalty Score**: Penalty score for VPN usage (0-100)
-- **Hosting Provider Penalty**: Penalty for hosting provider IPs (0-100)
+## Installation Instructions
 
-### System Configuration
-- **Log Retention Days**: Number of days to retain logs (1-365)
-- **Whitelist IPs**: Comma-separated list of whitelisted IP addresses
-- **Whitelist ASNs**: Comma-separated list of whitelisted ASN numbers
+### Prerequisites
 
-## Differences from Stable Version
+1. Home Assistant OS or Supervised installation
+2. Add-on store access
+3. **Willingness to test pre-release software**
+4. **Basic troubleshooting knowledge recommended**
 
-The beta version includes:
-- Latest tested features and improvements
-- Bug fixes that will be included in the next stable release
-- Performance optimizations
-- Updated dependencies that have passed testing
+### Installation Steps
 
-## Differences from Alpha Version
+1. **Add Repository** (if not already added):
+   - Go to **Settings** → **Add-ons** → **Add-on Store**
+   - Click the **⋮** menu → **Repositories**
+   - Add: `https://github.com/BelphegorPrime/ha-addon-collection`
 
-Beta versions are more stable than alpha versions:
-- Features have undergone additional testing
-- Known critical bugs have been fixed
-- Performance has been validated
-- Configuration options are finalized
+2. **Install Beta Version**:
+   - Browse to **Boomberman Beta** in the add-on store
+   - Click **Install** (this may take several minutes)
+   - ⚠️ **Review beta warnings before proceeding**
 
-## Support
+3. **Configuration**:
+   - Configure the add-on through the **Configuration** tab
+   - Beta versions include new features not yet in production
+   - All options should be documented and stable
 
-For issues with the beta version, please report them in the main repository with the "beta" label. Beta issues are prioritized for the next stable release.
+4. **Start the Add-on**:
+   - Go to the **Info** tab
+   - Click **Start**
+   - Monitor logs during initial startup
 
-## Version Information
+### Configuration Options
 
-This beta version represents a release candidate for the next stable version. It receives updates less frequently than alpha but more frequently than stable releases.
+The beta version includes all production configuration options plus new features being prepared for release:
+
+#### Standard Options
+- **AI Enabled**: Enable/disable AI-powered bot detection
+- **Ollama URL**: URL for Ollama AI service
+- **Ollama model**: AI model to use for detection
+
+#### Beta Features (Upcoming in Production)
+- **Bot Detection Enabled**: Enable enhanced bot detection system
+- **Bot Detection Threshold Suspicious**: Threshold for marking activity as suspicious (0-100)
+- **Bot Detection Threshold High Risk**: Threshold for high-risk activity blocking (0-100)
+- **Log Retention Days**: Number of days to retain log files (1-365)
+- **High Risk Countries**: Comma-separated ISO country codes for geographic analysis
+- **VPN Penalty Score**: Additional risk score for VPN traffic (0-100)
+- **Hosting Provider Penalty**: Additional risk score for hosting provider IPs (0-100)
+- **Whitelist IPs**: Comma-separated list of always-trusted IP addresses
+- **Whitelist ASNs**: Comma-separated list of trusted Autonomous System Numbers
+
+#### Configuration Validation
+
+Beta versions include enhanced validation:
+- Threshold values must be between 0-100
+- Country codes must be valid ISO 3166-1 alpha-2 codes
+- IP addresses must be valid IPv4 or IPv6 format
+- ASN numbers must be valid integers
+
+## Troubleshooting
+
+### Common Beta Issues
+
+1. **Configuration Validation Errors**:
+   - Check that all values are within specified ranges
+   - Verify country codes are valid (e.g., "US", "GB", "DE")
+   - Ensure IP addresses are properly formatted
+
+2. **Performance Issues**:
+   - Enhanced bot detection may increase CPU usage
+   - Adjust thresholds if experiencing high load
+   - Monitor system resources during peak traffic
+
+3. **False Positives**:
+   - Fine-tune detection thresholds
+   - Add legitimate IPs to whitelist
+   - Review geographic penalty settings
+
+### Getting Help
+
+- **GitHub Issues**: Report bugs with detailed logs
+- **Community Forum**: Discussion and user support
+- **Documentation**: Check for updated configuration guides
+- **Migration Support**: Help moving between versions
+
+## Migration and Compatibility
+
+### Upgrading to Beta
+
+From Production:
+1. Stop the production add-on
+2. Install beta version
+3. Copy compatible configuration settings
+4. Configure new beta-specific options
+5. Test thoroughly before relying on it
+
+From Alpha:
+1. Beta versions are more stable than alpha
+2. Most alpha configurations should be compatible
+3. Some experimental alpha features may not be available
+
+### Downgrading from Beta
+
+To Production:
+1. Export your current configuration
+2. Install production version
+3. Import compatible settings (beta-specific options will be ignored)
+4. Verify functionality
+
+## Testing and Feedback
+
+### What to Test
+
+- **New Configuration Options**: Try different threshold combinations
+- **Bot Detection Accuracy**: Monitor false positives and negatives
+- **Performance Impact**: Check system resource usage
+- **Geographic Filtering**: Test with various country configurations
+- **Whitelist Functionality**: Verify trusted IPs are not blocked
+
+### Providing Feedback
+
+Your testing helps improve the final release:
+
+1. **Bug Reports**: Include logs, configuration, and steps to reproduce
+2. **Feature Feedback**: Share your experience with new options
+3. **Performance Data**: Report any resource usage concerns
+4. **Use Case Scenarios**: Describe how you're using the beta features
+
+## Release Information
+
+### Beta Release Schedule
+
+- **Beta Releases**: Created from release candidate branches
+- **Update Frequency**: Weekly to bi-weekly during release cycles
+- **Version Format**: `beta-{branch-name}-{timestamp}`
+- **Promotion Path**: Successful betas become production releases
+
+### Feature Stability
+
+Beta features are:
+- ✅ **Functionally complete**
+- ✅ **Tested in development environments**
+- ✅ **Documented with known limitations**
+- ⚠️ **May have minor bugs or edge cases**
+- ⚠️ **Subject to final adjustments before production**
+
+## Production Readiness
+
+### When to Use Beta
+
+- You want early access to new features
+- You can tolerate minor issues
+- You want to provide feedback on upcoming releases
+- You have the ability to troubleshoot problems
+- You can switch back to production if needed
+
+### When to Use Production Instead
+
+- You need maximum stability
+- You're running critical security infrastructure
+- You prefer well-tested, proven features
+- You don't want to deal with potential issues
+- You need guaranteed long-term support
+
+## Disclaimer
+
+Beta software is more stable than alpha but still carries risks. While suitable for advanced users and testing environments, use caution in production. The developers provide limited support for beta versions and recommend thorough testing before deployment in critical environments.
+
+For maximum stability and full support, use the production **Boomberman** add-on.

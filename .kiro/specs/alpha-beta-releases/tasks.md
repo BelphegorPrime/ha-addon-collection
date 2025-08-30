@@ -33,7 +33,7 @@
   - Add documentation explaining the different versions
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 6. Create version-specific documentation
+- [x] 6. Create version-specific documentation
   - Create separate DOCS.md files for alpha and beta versions
   - Document the differences between latest, beta, and alpha versions
   - Add installation instructions for each version
