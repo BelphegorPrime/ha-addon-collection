@@ -1,0 +1,42 @@
+name: "Boomberman Alpha"
+description: "Boomberman add-on (Alpha Version) - Development builds for testing new features"
+version: "0.1.12-alpha"
+slug: "addon_boomberman_alpha"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+map:
+  - type: share
+    read_only: False
+  - type: data
+    read_only: False
+options:
+  "AI Enabled": false
+  "Ollama URL": "http://<ollama-url-ip>:11434"
+  "Ollama model": "llama3.2"
+  "Bot Detection Enabled": true
+  "Bot Detection Threshold Suspicious": 30
+  "Bot Detection Threshold High Risk": 70
+  "Log Retention Days": 7
+  "High Risk Countries": "CN,RU,KP,IR"
+  "VPN Penalty Score": 20
+  "Hosting Provider Penalty": 15
+  "Whitelist IPs": "127.0.0.1,::1"
+  "Whitelist ASNs": ""
+schema:
+  "AI Enabled": "bool"
+  "Ollama URL": "str"
+  "Ollama model": "str"
+  "Bot Detection Enabled": "bool"
+  "Bot Detection Threshold Suspicious": "int(0,100)"
+  "Bot Detection Threshold High Risk": "int(0,100)"
+  "Log Retention Days": "int(1,365)"
+  "High Risk Countries": "str"
+  "VPN Penalty Score": "int(0,100)"
+  "Hosting Provider Penalty": "int(0,100)"
+  "Whitelist IPs": "str"
+  "Whitelist ASNs": "str?"
+ports:
+  9092/tcp: 9092

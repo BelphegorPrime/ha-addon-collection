@@ -1,0 +1,10 @@
+build_from:
+  aarch64: ghcr.io/belphegorprime/boomberman:alpha
+  amd64: ghcr.io/belphegorprime/boomberman:alpha
+labels:
+  org.opencontainers.image.title: "Home Assistant Add-on: Boomberman add-on (Alpha)"
+  org.opencontainers.image.description: "Boomberman add-on - Alpha development version"
+  org.opencontainers.image.source: "https://github.com/BelphegorPrime/ha-addon-collection"
+  org.opencontainers.image.licenses: "MIT"
+args:
+  TEMPIO_VERSION: "2021.09.0"

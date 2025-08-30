@@ -12,7 +12,7 @@
   - Add default values for optional configuration parameters
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 3. Create alpha version add-on configuration
+- [x] 3. Create alpha version add-on configuration
   - Create addon-boomberman-alpha directory with separate config.yaml
   - Configure alpha version to use alpha Docker images from base repository
   - Set appropriate version numbering for alpha releases
