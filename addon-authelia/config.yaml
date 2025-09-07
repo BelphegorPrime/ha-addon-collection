@@ -20,6 +20,7 @@ options:
   "JWT Secret": "a_very_important_secret"
   "Session Secret": "session_giberish_aslkjdhgio_secret"
   "Storage Encryption Key": "storage_giberish_aslkjdhgio_encryption_key"
+  "SMTP Enabled": false
   "SMTP Server": "smtp.example.com"
   "SMTP Port": 587
   "SMTP Username": "smtp_user"
@@ -30,6 +31,7 @@ options:
   Logins:
     - email: user@example.com
       password: "123456"
+  "OIDC Enabled": false
   "OIDC Clients":
     - id: "client_id"
       secret: "client_secret"
@@ -51,6 +53,7 @@ schema:
   "JWT Secret": "str"
   "Session Secret": "str"
   "Storage Encryption Key": "str"
+  "SMTP Enabled": "bool"
   "SMTP Server": "str"
   "SMTP Port": "int"
   "SMTP Username": "str"
@@ -61,6 +64,7 @@ schema:
   Logins:
     - email: str
       password: str
+  "OIDC Enabled": "bool"
   "OIDC Clients":
     - id: str
       secret: str
