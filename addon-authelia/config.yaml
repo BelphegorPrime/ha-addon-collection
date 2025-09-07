@@ -1,6 +1,6 @@
 name: "Authelia"
 description: "Authelia add-on!"
-version: "4.38.19"
+version: "4.38.19-1"
 slug: "addon_authelia"
 arch:
   - aarch64
