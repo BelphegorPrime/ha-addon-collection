@@ -1,10 +1,11 @@
 users:
-  "{{.email}}":
+  "{{.admin_user_email}}":
     password: "{{.password_hash}}"
     displayname: "Admin"
-    email: "{{.email}}"
+    email: "{{.admin_user_email}}"
     groups:
       - admins
+      - users
 {{ if .logins }}
 {{- range $index, $element := .logins }}
   "{{$element.email}}":

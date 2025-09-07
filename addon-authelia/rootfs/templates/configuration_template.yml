@@ -41,3 +41,50 @@ storage:
 notifier:
   filesystem:
     filename: "/config/notification.txt"
+  smtp:
+    host: {{.smtp_server}}
+    port: {{.smtp_port}}
+    username: {{.smtp_username}}
+    password: {{.smtp_password}}
+    sender: {{.smtp_sender}}
+    tls:
+      skip_verify: {{.smtp_tls}}
+
+identity_providers:
+  oidc:
+    hmac_secret: {{.oidc_hmac_secret}}
+    jwks:
+      - key_id: 'main'
+        algorithm: 'RS256'
+        key: {{ .jwks_key }}
+    clients:
+{{ if .oidc_clients }}
+{{- range $index, $element := .oidc_clients }}
+        - id: "{{$element.id}}"
+          secret: "{{$element.secret}}"
+          redirect_uris:
+        {{ if $element.redirect_uris }}
+        {{- range $i, $uri := $element.redirect_uris }}
+                - "{{$uri}}"
+        {{- end }}
+        {{ end }}
+          scopes:
+        {{ if $element.scopes }}
+        {{- range $i, $scope := $element.scopes }}
+                - "{{$scope}}"
+        {{- end }}
+        {{ end }}
+          grant_types:
+        {{ if $element.grant_types }}
+        {{- range $i, $grant_type := $element.grant_types }}
+                - "{{$grant_type}}"
+        {{- end }}
+        {{ end }}
+          response_types:
+        {{ if $element.response_types }}
+        {{- range $i, $response_type := $element.response_types }}
+                - "{{$response_type}}"
+        {{- end }}
+        {{ end }}
+{{- end }}
+{{ end }}

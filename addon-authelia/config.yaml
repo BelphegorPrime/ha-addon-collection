@@ -8,6 +8,7 @@ arch:
   - armv7
 init: false
 map:
+  - type: ssl
   - type: share
     read_only: False
   - type: data
@@ -19,9 +20,30 @@ options:
   "JWT Secret": "a_very_important_secret"
   "Session Secret": "session_giberish_aslkjdhgio_secret"
   "Storage Encryption Key": "storage_giberish_aslkjdhgio_encryption_key"
+  "SMTP Server": "smtp.example.com"
+  "SMTP Port": 587
+  "SMTP Username": "smtp_user"
+  "SMTP Password": "smtp_password"
+  "SMTP Sender": "no-reply@example.com"
+  "SMTP TLS": true
+  "OIDC HMAC Secret": 'well_this_is_a_secret_abc123abc123abc%20^^^"!$'
   Logins:
     - email: user@example.com
       password: "123456"
+  "OIDC Clients":
+    - id: "client_id"
+      secret: "client_secret"
+      redirect_uris:
+        - "https://example.com/callback"
+      scopes:
+        - openid
+        - profile
+        - email
+      grant_types:
+        - authorization_code
+      response_types:
+        - code
+      token_endpoint_auth_method: client_secret_basic
 schema:
   "Admin User Email": "str"
   Domain: "str"
@@ -29,8 +51,27 @@ schema:
   "JWT Secret": "str"
   "Session Secret": "str"
   "Storage Encryption Key": "str"
+  "SMTP Server": "str"
+  "SMTP Port": "int"
+  "SMTP Username": "str"
+  "SMTP Password": "str"
+  "SMTP Sender": "str"
+  "SMTP TLS": "bool"
+  "OIDC HMAC Secret": "str"
   Logins:
     - email: str
       password: str
+  "OIDC Clients":
+    - id: str
+      secret: str
+      redirect_uris:
+        - str
+      scopes:
+        - str
+      grant_types:
+        - str
+      response_types:
+        - str
+      token_endpoint_auth_method: str
 ports:
   9091/tcp: 9091
