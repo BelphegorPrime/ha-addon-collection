@@ -1,6 +1,6 @@
-# Full Assist setup with Needle 2
+# Full Assist setup with Needle
 
-This guide connects the Needle 2 add-on to a Home Assistant Assist voice
+This guide connects the Needle add-on to a Home Assistant Assist voice
 pipeline.
 
 After completing the main setup, you can say:
@@ -70,7 +70,7 @@ Complete the following stages in order:
    ```
 
 5. Close the repository dialog.
-6. Find and open **Needle 2**.
+6. Find and open **Needle**.
 7. Select **Install**.
 8. Leave the add-on configuration at its default value:
 
@@ -112,7 +112,7 @@ curl http://192.168.1.50:7860/model
 A ready add-on returns model information similar to:
 
 ```json
-{"name": "needle-2 (base)"}
+{"name": "needle (base)"}
 ```
 
 If this request fails, do not continue yet. Check:

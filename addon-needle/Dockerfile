@@ -23,7 +23,7 @@ RUN apt-get update \
         tini \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m pip install --no-cache-dir "cactus-needle==${NEEDLE_VERSION}" \
-    # Needle 2.0.6 uses origin-root URLs (for example /style.css and /model).
+    # Needle 3.0.1 uses origin-root URLs (for example /style.css and /model).
     # Home Assistant ingress mounts the app below a tokenized path, so make all
     # bundled UI resources and API calls relative to that ingress path.
     && playground="/usr/local/lib/python3.11/site-packages/needle/playground" \
@@ -87,7 +87,7 @@ LABEL \
     org.opencontainers.image.authors="Marcel Rösler <me@marcel.codes>" \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
-    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/addon-needle-2/DOCS.md" \
+    org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/addon-needle/DOCS.md" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${BUILD_REF}" \
     org.opencontainers.image.version="${BUILD_VERSION}"

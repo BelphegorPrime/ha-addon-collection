@@ -1,9 +1,9 @@
-# Home Assistant Add-on: Needle 2
+# Home Assistant Add-on: Needle
 
 Run the [Cactus Compute Needle](https://github.com/cactus-compute/needle) local
 tool-calling playground on a Home Assistant system.
 
-Needle 2 is a compact local model for selecting tools and producing structured
+Needle is a compact local model for selecting tools and producing structured
 arguments. Inference runs locally after the add-on image has been installed.
 
 ## Supported systems
@@ -26,9 +26,9 @@ Home Assistant's `armv7` architecture.
    https://github.com/BelphegorPrime/ha-addon-collection
    ```
 
-4. Find **Needle 2** in the store and install it.
+4. Find **Needle** in the store and install it.
 5. Start the add-on.
-6. Select **Open Web UI**, or select **Needle 2** in the Home Assistant sidebar.
+6. Select **Open Web UI**, or select **Needle** in the Home Assistant sidebar.
 
 The first start can take a while while Needle initializes its model. Home
 Assistant's watchdog and the container health check wait for the `/model`
@@ -92,7 +92,7 @@ curl http://192.168.1.50:7860/model
 A ready add-on returns a response similar to:
 
 ```json
-{"name": "needle-2 (base)"}
+{"name": "needle (base)"}
 ```
 
 ### Optional health sensor
@@ -358,7 +358,7 @@ settings.
 
 For an end-to-end, copy-and-paste setup using the add-on, Home Assistant
 custom sentences, safe response validation, and a voice pipeline, follow
-[Full Assist setup with Needle 2](FULL_ASSIST_SETUP.md). It starts with a
+[Full Assist setup with Needle](FULL_ASSIST_SETUP.md). It starts with a
 working lighting example and tests each integration layer separately.
 
 This add-on does not register a Home Assistant
