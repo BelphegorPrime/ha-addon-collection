@@ -3,7 +3,7 @@
 FROM python:3.11-slim-bookworm
 
 ARG BUILD_ARCH=amd64
-ARG NEEDLE_VERSION=2.0.6
+ARG NEEDLE_VERSION=3.0.1
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
