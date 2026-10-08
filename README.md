@@ -22,6 +22,16 @@ This repository contains the following add-ons
 ![Supports amd64 Architecture][amd64-shield]
 ![Supports armv7 Architecture][armv7-shield]
 
+### Needle add-on
+
+Run [Cactus Compute Needle](https://github.com/cactus-compute/needle) locally in Home Assistant for schema-constrained LLM tool routing.
+
+- [Needle add-on overview and installation](addon-needle/README.md)
+- [Full Needle add-on documentation](addon-needle/DOCS.md)
+- [Needle LLM custom integration](https://github.com/BelphegorPrime/ha-needle-llm) — connect the add-on to Home Assistant's native Assist LLM tools through a compatible conversation agent.
+
+The add-on provides the local Needle server. The separate custom integration provides the Home Assistant LLM API and validates selected native Assist tools before execution.
+
 ## Boomberman Add-on Versions
 
 This repository provides three versions of the Boomberman add-on to meet different user needs:
