@@ -28,6 +28,7 @@ Run [Cactus Compute Needle](https://github.com/cactus-compute/needle) locally in
 
 - [Needle add-on overview and installation](addon-needle/README.md)
 - [Full Needle add-on documentation](addon-needle/DOCS.md)
+- [Assist setup with custom sentences (without an LLM agent)](addon-needle/FULL_ASSIST_SETUP.md)
 - [Needle LLM custom integration](https://github.com/BelphegorPrime/ha-needle-llm) — connect the add-on to Home Assistant's native Assist LLM tools through a compatible conversation agent.
 
 The add-on provides the local Needle server. The separate custom integration provides the Home Assistant LLM API and validates selected native Assist tools before execution.
