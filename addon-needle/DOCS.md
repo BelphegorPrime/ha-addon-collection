@@ -6,6 +6,21 @@ tool-calling playground on a Home Assistant system.
 Needle is a compact local model for selecting tools and producing structured
 arguments. Inference runs locally after the add-on image has been installed.
 
+## Using Needle with Home Assistant Assist
+
+**Want to use Needle with an LLM conversation agent in Home Assistant?** Install the
+separate [Needle LLM custom integration](https://github.com/BelphegorPrime/ha-needle-llm)
+alongside this add-on.
+
+- **This add-on** hosts the local Needle inference server and HTTP API.
+- **Needle LLM integration** exposes a selectable Home Assistant LLM API, sends
+  tool-routing requests to Needle, and validates and executes tools through
+  Home Assistant's native Assist API.
+
+See the [integration repository](https://github.com/BelphegorPrime/ha-needle-llm)
+for HACS installation, configuration, and conversation-agent setup. You can also
+use the add-on's HTTP API directly from scripts and automations, as described below.
+
 ## Supported systems
 
 This add-on supports:
@@ -64,8 +79,10 @@ The add-on provides:
 - `POST /complete` for one-turn tool selection;
 - `POST /reset` to clear the current conversation state.
 
-It is not currently a drop-in Home Assistant conversation agent and does not
-automatically appear in Assist.
+The add-on itself does not register an Assist conversation agent. For a
+compatible LLM conversation agent, use the
+[Needle LLM custom integration](https://github.com/BelphegorPrime/ha-needle-llm)
+to make Needle available through a selectable Home Assistant LLM API.
 
 ## Connect Home Assistant to the add-on
 
