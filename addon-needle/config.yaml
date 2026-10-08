@@ -2,7 +2,7 @@ name: "Needle"
 description: "Run the Cactus Compute Needle local tool-calling playground"
 version: "3.0.1-4"
 slug: "addon_needle"
-url: "https://github.com/BelphegorPrime/ha-addon-collection/tree/main/addon-needle"
+url: "https://github.com/BelphegorPrime/ha-addon-collection/tree/master/addon-needle"
 arch:
   - aarch64
   - amd64
