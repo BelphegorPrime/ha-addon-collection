@@ -33,5 +33,7 @@ Assist tools, and respects Home Assistant's entity exposure and tool validation.
 4. If using an LLM conversation agent, install and configure the
    [Needle LLM custom integration](https://github.com/BelphegorPrime/ha-needle-llm).
 
-For manual REST calls, example automations, configuration and troubleshooting,
-see the [full add-on documentation](DOCS.md).
+For direct REST calls, example automations, configuration and troubleshooting,
+see the [full add-on documentation](DOCS.md). For an alternative setup using
+Home Assistant's built-in custom sentences rather than an LLM conversation
+agent, see the [manual Assist setup guide](FULL_ASSIST_SETUP.md).
