@@ -385,55 +385,40 @@ Needle produces function calls rather than general conversational text, so it
 is best used as the intent/tool-selection stage of a voice pipeline, not as the
 speech response generator.
 
-There are two practical integration levels:
+There are two practical integration paths:
 
-1. **Simple commands:** create Home Assistant scripts like the example above
-   and invoke them from dashboard controls or existing intent automations.
-2. **Full Assist integration:** build or install a custom Home Assistant
-   conversation integration that converts exposed actions into Needle tool
-   schemas, calls `/complete`, validates the result, dispatches an approved
-   Home Assistant action, and returns speech for Assist to read.
+1. **Recommended for LLM conversation agents:** Install the
+   [Needle LLM custom integration](https://github.com/BelphegorPrime/ha-needle-llm) via HACS. This
+   registers a **selectable Home Assistant LLM API** that uses Needle for
+   tool selection. It dynamically mirrors native Assist tools, validates
+   selected tool arguments and delegates execution to Home Assistant.
+2. **Manual commands without an LLM conversation agent:** Follow the
+   [custom-sentence Assist guide](FULL_ASSIST_SETUP.md), which configures
+   an `Ask Needle to ...` trigger phrase, REST command and safe script.
 
-#### Full Assist integration
+#### Recommended: Needle LLM with an existing conversation agent
 
-A full integration lets a request follow this path:
+1. Install and start this [Needle add-on](https://github.com/BelphegorPrime/ha-addon-collection/tree/master/addon-needle).
+2. Install [Needle LLM](https://github.com/BelphegorPrime/ha-needle-llm) from HACS as a
+   custom repository (category **Integration**).
+3. Configure **Needle LLM** under **Settings → Devices & services** with a
+   reachable add-on URL such as `http://192.168.1.50:7860`.
+4. In a compatible LLM conversation integration (for example, llama.cpp),
+   enable the **Needle LLM** LLM API. Disable the regular Assist LLM API for
+   that agent if all its tool usage should pass through Needle.
+5. Test with harmless devices or read-only queries.
 
-```text
-Microphone
-  → wake word
-  → speech-to-text
-  → custom Needle conversation agent
-  → Needle add-on POST /complete
-  → validated Home Assistant intent, script, or service call
-  → text response
-  → text-to-speech
-  → speaker
-```
+The add-on hosts Needle, while the custom integration exposes its routing to
+an **existing** LLM conversation model. **Needle LLM does not register a
+standalone conversation agent or a `needle_conversation` entity.**
+Consult its [README](https://github.com/BelphegorPrime/ha-needle-llm) for current details.
 
-Wake-word detection, speech-to-text, and text-to-speech remain separate Home
-Assistant pipeline components. The custom integration replaces only the
-**conversation agent** in the middle of the pipeline.
+#### Optional design reference: building a separate conversation entity
 
-A production integration should be installed under a directory such as:
-
-```text
-/config/custom_components/needle_conversation/
-├── __init__.py
-├── manifest.json
-├── config_flow.py
-├── const.py
-├── conversation.py
-├── coordinator.py
-└── translations/
-    └── en.json
-```
-
-Home Assistant's conversation API changes over time. Consult the current
-[conversation entity developer
-documentation](https://developers.home-assistant.io/docs/core/entity/conversation/)
-when implementing these files. The following sections describe the stable
-responsibilities and data flow rather than source code that may become tied to
-one Home Assistant release.
+The following sections are architectural guidance for developers implementing
+their own **standalone conversation entity**. This is a different design,
+**not** the installation or behavior of the existing
+[Needle LLM integration](https://github.com/BelphegorPrime/ha-needle-llm).
 
 ##### 1. Configuration flow
 
@@ -695,10 +680,11 @@ as:
 
 ##### 9. Configure the Assist pipeline
 
-After the custom integration has been installed and Home Assistant restarted:
+**Only for a separately developed conversation entity, not for Needle LLM:**
+After that custom integration has been installed and Home Assistant restarted:
 
 1. Open **Settings → Devices & services**.
-2. Add the custom Needle conversation integration.
+2. Add your custom Needle conversation integration.
 3. Enter the Home Assistant host address and Needle port.
 4. Confirm that its setup test can read `GET /model`.
 5. Open **Settings → Voice assistants**.
@@ -802,7 +788,12 @@ run separately from Home Assistant Core and do not register conversation
 entities or receive direct access to Home Assistant's entity and service
 registries.
 
-A companion Home Assistant custom integration can automate this process:
+The existing [Needle LLM integration](https://github.com/BelphegorPrime/ha-needle-llm) already obtains
+native Assist LLM tool definitions from Home Assistant for each routing
+request, without requiring hand-written domain-level tool schemas.
+
+If you are developing a **different, standalone conversation integration**,
+an alternative design could:
 
 1. read Home Assistant's entity, device, and area registries;
 2. include only entities explicitly exposed to Assist under
@@ -892,6 +883,11 @@ maintaining hundreds of tools, while keeping Home Assistant—not the model—as
 the authorization and execution boundary.
 
 ## Integration design recommendations
+
+For the existing [Needle LLM integration](https://github.com/BelphegorPrime/ha-needle-llm),
+Home Assistant supplies the native Assist tool schemas and performs
+tool validation and execution. The following suggestions primarily apply
+to custom REST clients or separately developed integrations.
 
 - Start with two to five narrow tools. Needle uses retrieval when more than
   five tools are supplied, but a smaller set is easier to test and secure.
