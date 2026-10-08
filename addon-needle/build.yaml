@@ -7,4 +7,4 @@ labels:
   org.opencontainers.image.source: "https://github.com/BelphegorPrime/ha-addon-collection"
   org.opencontainers.image.licenses: "MIT"
 args:
-  NEEDLE_VERSION: "3.0.1"
+  NEEDLE_VERSION: "3.1.3"

@@ -3,7 +3,7 @@
 FROM python:3.11-slim-bookworm
 
 ARG BUILD_ARCH=amd64
-ARG NEEDLE_VERSION=3.0.1
+ARG NEEDLE_VERSION=3.1.3
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -23,7 +23,7 @@ RUN apt-get update \
         tini \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m pip install --no-cache-dir "cactus-needle==${NEEDLE_VERSION}" \
-    # Needle 3.0.1 uses origin-root URLs (for example /style.css and /model).
+    # Needle 3.1.3 uses origin-root URLs (for example /style.css and /model).
     # Home Assistant ingress mounts the app below a tokenized path, so make all
     # bundled UI resources and API calls relative to that ingress path.
     && playground="/usr/local/lib/python3.11/site-packages/needle/playground" \
