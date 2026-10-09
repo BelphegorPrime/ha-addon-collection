@@ -85,8 +85,9 @@ def install_offline(
         dest = needle_model_dir / src.name
         # Package site-packages are rebuilt on add-on upgrades, while the
         # original copy always survives in the Supervisor /share volume.
-        if not dest.is_file() or src.stat().st_size != dest.stat().st_size:
-            _atomic_copy(src, dest)
+        # Always refresh on process start: same-length tokenizer revisions
+        # must not leave stale package-local assets.
+        _atomic_copy(src, dest)
         outputs.append(dest)
     print(
         f"Offline tokenizer ready: {needle_model_dir / 'tokenizer.model'}",
