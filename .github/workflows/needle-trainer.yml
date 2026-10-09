@@ -85,6 +85,7 @@ jobs:
         run: |
           docker run --rm \
             --env JAX_PLATFORMS=cpu \
+            --env PYTHONPATH=/app \
             -v "$PWD/addon-needle-trainer/tests:/work/tests:ro" \
             --entrypoint python3 local/needle-trainer:ci \
             /work/tests/smoke_confidence_grad.py
