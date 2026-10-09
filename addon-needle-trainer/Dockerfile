@@ -9,10 +9,23 @@ ENV PYTHONUNBUFFERED=1 \
     JAX_PLATFORMS=cpu \
     PIP_NO_CACHE_DIR=1 \
     NEEDLE_TELEMETRY=0 \
-    DO_NOT_TRACK=1
+    DO_NOT_TRACK=1 \
+    NEEDLE3_LIB_PATH=/opt/needle-engine/libneedle.so \
+    NEEDLE_LIB_PATH=/opt/needle-engine/libneedle.so
 
+# Bundle the generation-3 *native* inference engine at build time.
+# Runtime evaluation is HF_HUB_OFFLINE=1, so it must not fetch libraries.
+# Same engine download command as the regular Needle inference add-on.
 RUN python3 -m pip install --no-cache-dir "cactus-needle[train]==${NEEDLE_VERSION}" \
-    && python3 -m pip check
+    && python3 -m pip check \
+    && case "${BUILD_ARCH}" in \
+        amd64) platform_tag="manylinux2014_x86_64" ;; \
+        aarch64) platform_tag="manylinux2014_aarch64" ;; \
+        *) echo "Unsupported build architecture: ${BUILD_ARCH}" >&2; exit 1 ;; \
+    esac \
+    && mkdir -p /opt/needle-engine \
+    && needle fetch --out /opt/needle-engine --platform-tag "${platform_tag}" \
+    && test -s /opt/needle-engine/libneedle.so
 COPY app/ /app/
 WORKDIR /app
 
