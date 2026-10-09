@@ -29,6 +29,8 @@ def hash_file(path: Path) -> str:
 
 
 def _regular_input(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing experiment input: {path}")
     if not path.is_file() or path.is_symlink():
         raise ValueError(f"Expected immutable ordinary experiment input: {path}")
 
