@@ -309,6 +309,62 @@ are fetched. No network access occurs during `train` or `calibrate`.
 
 
 
+## v0.2.6: diagnostic report and isolated safety-training experiment
+
+The first genuine native six-language evaluation of our local candidate yielded
+**0/18 valid calls approved, 18/18 no-action cases blocked**, with native
+confidence for correct generated calls between **0.2832 and 0.7729**.
+**10/18 no-action cases still generated an unwanted action** (six were the
+hypothetical lock scenario in every language). The held-out *pre-quantization
+head-only* ranking accuracy was **19/36 = 52.8%**. These figures are not an
+approval; the existing 0.8 gate must stay unchanged.
+
+**First: inspect the already saved evaluation without rerunning Needle.**
+Select `mode: diagnose_local` and `confirm_resource_use: true`, then start
+the trainer manually. This requires
+`/share/needle-training/evaluation/test-report.json` and writes an
+additional `evaluation/diagnosis.json` containing grouped native generation
+outcomes by scenario, language, risk and family, plus a **counterfactual**
+confidence sweep. The sweep only uses stored raw calls and native combined
+confidence; it does **not** emulate the full HA routing or grounding pipeline,
+and no threshold is presented as safe for live execution.
+
+**Second: stage training data, without modifying your old model.**
+Select `mode: prepare_experiment` and manually start the trainer. This creates:
+
+```text
+/share/needle-training/experiments/v026/
+    scenarios.json
+    train.jsonl
+    validation.jsonl
+    test.jsonl
+    data_manifest.json
+```
+
+There are **312 staged training examples** (216 original and 96 additional
+across all six languages), with **the original 36 validation and 36 held-out
+test examples preserved byte-for-byte**. Augmentation contains hypothetical
+questions, prohibitions, unsupported tool categories and positive polite
+requests to counteract over-rejection. No exact original test utterance is
+copied into the training data. This is **experiment preparation only**:
+`mode: train` still works against the old *root* train.jsonl and model files,
+and does not use the experiment folder. An isolated train-and-compare pipeline
+is a separate, explicit next step; no automatic retraining has been enabled.
+A second attempt to stage the same experiment fails rather than overwriting.
+
+**Never use `mode: prepare` to stage this experiment:** that mode intentionally
+targets the original root dataset for the original v0.2.x training workflow.
+No `approved.cact`, `approved.json`, or running HA model is written by either
+new mode. The saved native benchmark and its training fingerprints remain
+untouched.
+
+Only the *native combined confidence* is reported by the public exported
+Needle engine. A separate JAX head-only probability is available from
+`evaluate_local`, but because it scores *different completed calls* on
+unquantized weights, it cannot be subtracted from native confidence to recover
+decode probabilities. Any further confidence calibration changes must be
+validated on scenario-disjoint validation data before touching held-out tests.
+
 ## Native exported-model benchmark and head diagnostics (v0.2.5)
 
 After `finished: true` for confidence calibration, manually start
