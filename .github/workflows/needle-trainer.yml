@@ -64,7 +64,19 @@ jobs:
             -t local/needle-trainer:ci addon-needle-trainer
       - name: Check pinned Needle CLI
         run: docker run --rm --entrypoint needle local/needle-trainer:ci --help
-      - name: Smoke test local JAX calibrator imports
+      - name: Smoke test JAX and resumable head checkpoint
         run: |
-          docker run --rm --entrypoint python3 local/needle-trainer:ci \
-            -c "import jax, optax; import local_confidence; print('CPU-only JAX and local trainer import OK')"
+          docker run --rm --entrypoint python3 local/needle-trainer:ci -c '
+          import jax, jax.numpy as jnp, tempfile
+          from pathlib import Path
+          from local_confidence import save_progress, load_progress
+          with tempfile.TemporaryDirectory() as d:
+              p = Path(d) / "confidence_head.npz"
+              head = {"proj": {"kernel": jnp.ones((2, 1))}}
+              save_progress(head, p, step=2, fingerprint="test",
+                            losses=[0.4], total_steps=8)
+              restored, step, total = load_progress(p, "test")
+              assert step == 2 and total == 8
+              assert restored["proj"]["kernel"].shape == (2, 1)
+          print("CPU-only JAX + atomic confidence-head checkpoint OK")
+          '
