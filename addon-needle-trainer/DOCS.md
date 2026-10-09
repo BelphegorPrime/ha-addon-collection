@@ -37,7 +37,7 @@ container and does not stop for these jobs.
 
 - `mode`: `idle` (default), `prepare`, `download`,
   `download_tokenizer`, `download_base`, `train`, `calibrate`,
-  `export_local` or `build`.
+  `calibrate_all`, `export_local` or `build`.
 - `confirm_resource_use`: mandatory `true` for non-idle modes.
 - `confirm_uncalibrated_export`: separately required for `build`.
 - `memory_limit_mib`: 2048–12288 (default 4096).
@@ -127,7 +127,7 @@ See [Needle model approval](../addon-needle/DOCS.md#automatic-selection-of-appro
 
 
 
-## Fully local confidence-head training (experimental, v0.2.0)
+## Fully local confidence-head training (experimental, v0.2.4)
 
 The previous local Needle LoRA exporter dropped the confidence head.
 The optional new `calibrate` and `export_local` modes implement a
@@ -164,14 +164,16 @@ In the Needle Trainer add-on options, set
    `needle3.cact` base archive once (required for its tokenizer).
 4. `train` — trains the local LoRA adapter. Produces
    `needle_lora.safetensors`.
-5. `calibrate` — trains a **small bounded slice** of the confidence
-   head with both correct and incorrect completed tool calls.
-   Defaults: 8 steps, one batch at a time, one low-priority logical CPU.
-   Each step is saved atomically in `confidence_head.npz`. Restart
-   `calibrate` to resume from the next step. The options
-   `calibration_steps_per_run` (1–32) and `calibration_epochs` (1–5)
-   control slice size and total training amount. Keep the epoch setting
-   unchanged while resuming.
+5. **`calibrate_all` (recommended when the host has spare RAM)** —
+   continues from the existing `confidence_head.npz` checkpoint and
+   trains every remaining confidence step in **one manually started job**.
+   The configured `calibration_steps_per_run` does not limit this mode.
+   The existing `calibrate` mode remains available for short, manually
+   bounded slices of 1–32 steps. Both modes use the same examples,
+   optimizer, checkpoint format and `calibration_epochs` (1–5).
+   **Every finished step is atomically saved**, so a stopped job can
+   resume on the next **manual** start without retraining previous steps.
+   Keep `calibration_epochs` unchanged when resuming.
 6. `export_local` — requires **all** confidence-training steps to
    finish. Combines the LoRA-merged transformer and locally trained
    confidence head into
@@ -182,12 +184,22 @@ In the Needle Trainer add-on options, set
 Afterwards set `mode: idle` and
 `confirm_resource_use: false`.
 
-The small-step approach allows you to stop after any slice and perform
-the next one when your Home Assistant host is less busy. Each training
-start still loads the JAX model and may require significant RAM and
-compilation time. The memory reserve check, CPU affinity, low process
-priority and virtual memory cap remain in force; if the host cannot
-support a slice, it fails without modifying production inference.
+For either mode the Home Assistant add-on remains `startup: once` and
+`boot: manual`: it neither runs in the background nor starts itself on a
+schedule. `calibrate_all` avoids repeatedly loading and compiling JAX.
+If interrupted (including by the memory watchdog), all completed
+atomic checkpoints remain in `/share/needle-training/confidence_head.npz`;
+restart the add-on manually with the same `calibration_epochs` and
+`mode: calibrate_all` to continue.
+
+Each start still needs enough spare host RAM. The existing CPU affinity,
+`nice +19` and best-effort *physical RSS* watchdog remain in force
+(default `memory_limit_mib: 4096` with 2048 MiB reserve).
+There is no `RLIMIT_AS` virtual address limit and **no strict cgroup RAM
+quota**. The host can briefly experience spikes between watchdog samples.
+For users who want predictable limited-duration jobs, keep `mode: calibrate`
+and set `calibration_steps_per_run` to 1–32. The addon never
+automatically exports, approves or swaps inference weights.
 
 ### Validation and promotion
 
@@ -209,8 +221,9 @@ by the inference add-on docs. Restart the inference add-on to detect it.
 Never forge a `confidence_head: verified` manifest to circumvent a
 failed benchmark.
 
-This local route does **not** require the paid Needle Platform,
-but it is experimental and has not been measured on your actual CPU yet.
+This local route does **not** require the paid Needle Platform.
+Full-model calibration and export still require live hardware testing,
+followed by independent held-out quality and safety evaluation.
 The hosted Platform route below is optional, not a prerequisite.
 
 
@@ -262,10 +275,11 @@ documents the metadata schema. The JSON manifest is **not** a
 cryptographic proof of safety and cannot create a missing confidence
 head. Restart the regular Needle add-on to pick up the new files.
 
-A fully local alternative would require modifying Needle itself to
-train and export its confidence head, followed by post-training
-probability calibration and held-out evaluation. That is not implemented
-in this add-on and may require more memory than weak HA hosts can spare.
+The experimental fully local extension above now trains and exports
+the existing confidence head without using hosted Needle Platform.
+That does not establish real-world probability calibration or action
+safety: independent validation and held-out evaluation remain essential.
+The training still may require more RAM than weak HA hosts can spare.
 
 Upstream references:
 [Needle fine-tuning](https://www.cactuscompute.com/blog/finetuning-needle)
@@ -293,6 +307,45 @@ You may also simply rerun `mode: download`: when
 `needle3.safetensors` already exists, only the missing tokenizer assets
 are fetched. No network access occurs during `train` or `calibrate`.
 
+
+
+## Continuous resumable confidence calibration (v0.2.4)
+
+For an existing successful LoRA adapter and partially completed
+confidence training, **do not run `prepare`, `train`, or download again**.
+Update the trainer add-on to v0.2.4, then save these options and press
+**Start** once:
+
+```yaml
+mode: calibrate_all
+confirm_resource_use: true
+calibration_steps_per_run: 32
+calibration_epochs: 2
+memory_limit_mib: 6144
+reserve_memory_mib: 2048
+cpu_core: 3
+```
+
+The example reflects a host where `40/864` confidence steps have
+already been saved and 6144 MiB is a verified safe resource budget.
+The trainer validates source/data fingerprints and the total step count
+before resuming. It should report `running 824 step(s)`; it does **not**
+repeat the first 40. At every completed step, it atomically replaces
+`confidence_head.npz`, exactly as `calibrate` does. There is **no**
+periodic restart, no silent re-download and no background work.
+
+On reaching step 864, the JSON summary contains
+`"finished": true`. The trainer stops normally; it never runs
+`export_local` on its own. After separate evaluation, choose
+`mode: export_local` in another manually started run to create a
+**candidate only**, not an approved model. Check real-world safety
+and calibrated confidence against untouched data before any approval.
+
+If you want to run only a few steps at a time, choose
+`mode: calibrate` instead. Changing between `calibrate` and
+`calibrate_all` never resets the stored progress. If the RAM watchdog
+terminates the process, the last successful checkpoint survives; a new
+manual run resumes from it.
 
 ## RESOURCE_EXHAUSTED during XLA compilation (v0.2.2)
 
