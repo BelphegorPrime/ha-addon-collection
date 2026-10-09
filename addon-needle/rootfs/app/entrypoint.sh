@@ -1,28 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-OPTIONS_FILE="/data/options.json"
 PORT="7860"
+SELECTION="/tmp/needle-selected-weights"
 
-weights="$(
-    python3 - "${OPTIONS_FILE}" <<'PY'
-import json
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-if not path.exists():
-    print("")
-    raise SystemExit
-
-try:
-    options = json.loads(path.read_text(encoding="utf-8"))
-except (OSError, json.JSONDecodeError) as error:
-    raise SystemExit(f"Unable to read {path}: {error}") from error
-
-print(str(options.get("weights", "")).strip())
-PY
-)"
+# Explicit weights have priority. Without them, look for a manually
+# benchmarked confidence-capable trained model under /share/needle-training.
+# LoRA adapters and uncalibrated .cact exports are never auto-selected.
+python3 /app/model_select.py
 
 args=(
     playground
@@ -30,19 +15,10 @@ args=(
     --port "${PORT}"
 )
 
-if [[ -n "${weights}" ]]; then
-    if [[ "${weights}" != /* ]]; then
-        echo "ERROR: The weights option must be an absolute path, for example /share/model.cact." >&2
-        exit 1
-    fi
-
-    if [[ ! -f "${weights}" ]]; then
-        echo "ERROR: The configured weights file does not exist: ${weights}" >&2
-        exit 1
-    fi
-
+if [[ -s "${SELECTION}" ]]; then
+    weights="$(cat "${SELECTION}")"
     args+=(--weights "${weights}")
-    echo "Starting Needle with custom weights: ${weights}"
+    echo "Starting Needle with selected model: ${weights}"
 else
     echo "Starting Needle with the bundled base model."
 fi
