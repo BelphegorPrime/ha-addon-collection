@@ -127,7 +127,7 @@ class TrainerTests(unittest.TestCase):
                 self.invoke()
         execute.assert_not_called()
 
-    def test_download_is_explicit_and_single_purpose(self) -> None:
+    def test_download_prepares_persistent_tokenizer_too(self) -> None:
         self.save(mode="download", confirm_resource_use=True)
         self.work.mkdir()
         with (
@@ -135,14 +135,78 @@ class TrainerTests(unittest.TestCase):
             patch.object(runner, "choose_cpu", return_value=0),
             patch.object(runner, "run_command") as execute,
         ):
-            # Pretend download has written the expected artifact.
-            def completed(*args, **kwargs):
-                (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+            def completed(command, **kwargs):
+                if command[0] == "needle":
+                    (self.work / "needle3.safetensors").write_bytes(
+                        b"checkpoint"
+                    )
+                else:
+                    directory = self.work / "tokenizer"
+                    directory.mkdir()
+                    (directory / "tokenizer.model").write_bytes(b"model")
+                    (directory / "tokenizer.vocab").write_bytes(b"vocab")
             execute.side_effect = completed
             self.assertEqual(self.invoke(), 0)
-        cmd = execute.call_args.args[0]
-        self.assertEqual(cmd[:3], ["needle", "download", "needle3.safetensors"])
+        commands = [call.args[0] for call in execute.call_args_list]
+        self.assertEqual(
+            commands[0][:3], ["needle", "download", "needle3.safetensors"]
+        )
+        self.assertEqual(commands[1][3], "download")
         self.assertNotIn("HF_HUB_OFFLINE", execute.call_args.kwargs["env"])
+
+    def test_download_reuses_existing_checkpoint(self) -> None:
+        self.save(mode="download", confirm_resource_use=True)
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=0),
+            patch.object(runner, "run_command") as execute,
+        ):
+            def completed(command, **kwargs):
+                directory = self.work / "tokenizer"
+                directory.mkdir()
+                (directory / "tokenizer.model").write_bytes(b"model")
+                (directory / "tokenizer.vocab").write_bytes(b"vocab")
+            execute.side_effect = completed
+            self.assertEqual(self.invoke(), 0)
+        execute.assert_called_once()
+        self.assertEqual(execute.call_args.args[0][3], "download")
+
+    def test_explicit_tokenizer_only_download(self) -> None:
+        self.save(mode="download_tokenizer", confirm_resource_use=True)
+        self.work.mkdir()
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=0),
+            patch.object(runner, "run_command") as execute,
+        ):
+            def completed(command, **kwargs):
+                directory = self.work / "tokenizer"
+                directory.mkdir()
+                (directory / "tokenizer.model").write_bytes(b"model")
+                (directory / "tokenizer.vocab").write_bytes(b"vocab")
+            execute.side_effect = completed
+            self.assertEqual(self.invoke(), 0)
+        execute.assert_called_once()
+        self.assertEqual(execute.call_args.args[0][3], "download")
+
+    def test_train_installs_offline_tokenizer_before_jax(self) -> None:
+        self.save(mode="train", confirm_resource_use=True)
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        (self.work / "train.jsonl").write_text("{}\n")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=1),
+            patch.object(runner, "run_command") as execute,
+        ):
+            self.assertEqual(self.invoke(), 0)
+        commands = [call.args[0] for call in execute.call_args_list]
+        self.assertEqual(commands[0][3], "install")
+        self.assertEqual(commands[1][:2], ["needle", "finetune"])
+        for call in execute.call_args_list:
+            self.assertEqual(call.kwargs["env"]["HF_HUB_OFFLINE"], "1")
 
     def test_auto_affinity_uses_only_one_available_logical_cpu(self) -> None:
         with patch.object(runner.os, "sched_getaffinity", return_value={2, 4, 6}):
