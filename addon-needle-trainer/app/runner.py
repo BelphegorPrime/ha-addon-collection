@@ -89,9 +89,10 @@ def run(
     mode = opts.get("mode", "idle")
     if mode not in (
         "idle", "prepare", "download", "download_tokenizer",
-        "download_base", "train", "calibrate", "calibrate_all", "export_local", "build",
+        "download_base", "train", "calibrate", "calibrate_all", "export_local",
+        "evaluate_local", "build",
     ):
-        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, calibrate_all, export_local or build")
+        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, calibrate_all, export_local, evaluate_local or build")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -179,14 +180,32 @@ def run(
                 "--lora", str(adapter),
                 "--out", str(work / "experimental-uncalibrated.cact"),
             ]
-        elif mode in ("calibrate", "calibrate_all", "export_local"):
+        elif mode in ("calibrate", "calibrate_all", "export_local", "evaluate_local"):
             env["HF_HUB_OFFLINE"] = "1"
             env["TRANSFORMERS_OFFLINE"] = "1"
             if not (work / "needle_lora.safetensors").is_file():
                 raise FileNotFoundError(
                     "Missing LoRA adapter; run mode=train first."
                 )
-            if mode == "export_local":
+            if mode == "evaluate_local":
+                # Read-only actual .cact inference + offline frozen-head
+                # JAX diagnostics against untouched validation/test groups.
+                # No Needle.run(), no HA endpoints, no auto-approval.
+                for required in (
+                    "needle3.cact", "candidate-local-confidence.cact",
+                    "confidence_head.npz", "train.jsonl",
+                    "validation.jsonl", "test.jsonl",
+                ):
+                    if not (work / required).is_file():
+                        raise FileNotFoundError(
+                            f"Missing {work / required}; export the local "
+                            "candidate and prepare held-out data first."
+                        )
+                cmd = [
+                    sys.executable, "-u", "/app/local_evaluate.py",
+                    str(work),
+                ]
+            elif mode == "export_local":
                 cmd = [
                     sys.executable, "-u", "/app/local_confidence.py",
                     "export", str(work),
@@ -233,7 +252,7 @@ def run(
         "Watchdog sampling is best-effort, not a hard cgroup quota.",
         flush=True,
     )
-    if mode in ("train", "calibrate", "calibrate_all"):
+    if mode in ("train", "calibrate", "calibrate_all", "evaluate_local"):
         # Upstream Needle loads tokenizer.model only from its installed
         # package directory. Restore it from persistent /share *before*
         # the expensive JAX startup, with network access still disabled.
@@ -282,6 +301,15 @@ def run(
             "Confidence training progress saved under /share/needle-training. "
             "Check the finished flag before using export_local; "
             "no model was deployed or approved.",
+            flush=True,
+        )
+    elif mode == "evaluate_local":
+        report = work / "evaluation" / "test-report.json"
+        if not report.is_file():
+            raise RuntimeError("Offline evaluation returned without a JSON report")
+        print(
+            f"Read-only held-out benchmark saved: {report}. "
+            "No real tools executed, no automatic HA model approval.",
             flush=True,
         )
     elif mode == "export_local":
