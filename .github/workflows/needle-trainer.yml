@@ -6,6 +6,7 @@ on:
       - 'feat/**'
     paths:
       - 'addon-needle-trainer/**'
+      - 'addon-needle/**'
       - '.github/workflows/needle-trainer.yml'
   pull_request:
     paths:
@@ -45,6 +46,10 @@ jobs:
           python addon-needle-trainer/app/training/workflow.py prepare --scenarios addon-needle-trainer/app/training/scenarios.json --output "${RUNNER_TEMP}/needle-data"
       - name: Offline resource safety tests
         run: python -m unittest discover -s addon-needle-trainer/tests -v
+      - name: Verify automatic model approval and base fallback
+        run: python -m unittest discover -s addon-needle/tests -v
+      - name: Check model selection startup syntax
+        run: bash -n addon-needle/rootfs/app/entrypoint.sh
 
   image:
     runs-on: ubuntu-latest
