@@ -277,6 +277,69 @@ class TrainerTests(unittest.TestCase):
         self.assertEqual(env["HF_HUB_OFFLINE"], "1")
         self.assertEqual(execute.call_args.kwargs["core"], 2)
 
+    def test_calibrate_all_is_one_manual_offline_run(self) -> None:
+        self.save(
+            mode="calibrate_all",
+            confirm_resource_use=True,
+            calibration_steps_per_run=32,
+            calibration_epochs=2,
+        )
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        (self.work / "needle_lora.safetensors").write_bytes(b"adapter")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=3),
+            patch.object(runner, "run_command") as execute,
+        ):
+            self.assertEqual(self.invoke(), 0)
+        # One tokenizer reinstall (offline), one calibration subprocess.
+        self.assertEqual(execute.call_count, 2)
+        command = execute.call_args.args[0]
+        self.assertEqual(command[3], "calibrate")
+        self.assertEqual(command[command.index("--steps") + 1], "32")
+        self.assertEqual(command[command.index("--epochs") + 1], "2")
+        self.assertIn("--all", command)
+        self.assertEqual(execute.call_args.kwargs["max_ram_mib"], 4096)
+        self.assertEqual(execute.call_args.kwargs["reserve_memory_mib"], 2048)
+        self.assertEqual(execute.call_args.kwargs["core"], 3)
+        self.assertEqual(execute.call_args.kwargs["env"]["HF_HUB_OFFLINE"], "1")
+        self.assertEqual(
+            execute.call_args.kwargs["env"]["TRANSFORMERS_OFFLINE"], "1"
+        )
+        self.assertFalse((self.work / "approved.cact").exists())
+        self.assertFalse((self.work / "candidate-local-confidence.cact").exists())
+
+    def test_calibrate_all_requires_explicit_confirmation(self) -> None:
+        self.save(mode="calibrate_all", confirm_resource_use=False)
+        with patch.object(runner, "run_command") as execute:
+            with self.assertRaisesRegex(ValueError, "confirm_resource_use"):
+                self.invoke()
+        execute.assert_not_called()
+
+    def test_calibrate_all_refuses_to_start_without_ram_reserve(self) -> None:
+        self.save(mode="calibrate_all", confirm_resource_use=True)
+        with (
+            patch.object(runner, "available_ram_mib", return_value=4000),
+            patch.object(runner, "run_command") as execute,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Refusing calibrate_all"):
+                self.invoke()
+        execute.assert_not_called()
+
+    def test_calibrate_all_refuses_missing_adapter(self) -> None:
+        self.save(mode="calibrate_all", confirm_resource_use=True)
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=3),
+            patch.object(runner, "run_command") as execute,
+        ):
+            with self.assertRaisesRegex(FileNotFoundError, "LoRA adapter"):
+                self.invoke()
+        execute.assert_not_called()
+
     def test_calibrated_export_is_local_and_not_auto_approved(self) -> None:
         self.save(mode="export_local", confirm_resource_use=True)
         self.work.mkdir()
