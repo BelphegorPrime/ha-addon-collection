@@ -6,8 +6,10 @@ weights. A separate add-on container protects the running Needle playground.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -80,6 +82,80 @@ def prepare(work: Path, scenarios_file: Path) -> None:
         print(f"{split}: {len(rows)} examples in {len(LANGUAGES)} languages", flush=True)
 
 
+
+def prepare_experiment(work: Path, scenarios_file: Path, extras_file: Path) -> Path:
+    """Stage v0.2.6 examples without touching legacy train/model artifacts.
+
+    Intentionally only prepares data. No alternate training/export command
+    exists yet because the old model/checkpoint must remain reproducible.
+    """
+    original = json.loads(scenarios_file.read_text(encoding="utf-8"))
+    additions = json.loads(extras_file.read_text(encoding="utf-8"))
+    if (original.get("schema_version") != 1
+        or additions.get("schema_version") != 1
+        or original.get("locales") != list(LANGUAGES)
+        or additions.get("locales") != list(LANGUAGES)
+        or not isinstance(additions.get("scenarios"), list)
+        or not additions["scenarios"]
+        or any(row.get("split") != "train" for row in additions["scenarios"])):
+        raise ValueError("Experiment additions must be train-only, six-language data")
+
+    target = work / "experiments" / "v026"
+    staged = work / "experiments" / ".v026-staging"
+    if target.exists() or staged.exists():
+        raise FileExistsError(
+            f"Experiment already exists or has incomplete staging: {target}. "
+            "Never overwrite an experiment or the old model automatically."
+        )
+    # Verify the old root dataset still equals the frozen repo test suite.
+    original_scenarios = load_scenarios(scenarios_file)
+    base_test = prepared_rows(original_scenarios, "test")
+    if not (work / "test.jsonl").is_file():
+        raise FileNotFoundError("Existing held-out test.jsonl must be present")
+    from training.workflow import read_jsonl
+    if read_jsonl(work / "test.jsonl") != base_test:
+        raise ValueError("Existing held-out test differs from source; refusing staging")
+
+    staged.mkdir(parents=True, exist_ok=False)
+    try:
+        merged = {**original, "scenarios": [
+            *original["scenarios"], *additions["scenarios"],
+        ]}
+        merged_path = staged / "scenarios.json"
+        merged_path.write_text(
+            json.dumps(merged, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        # The shared validator also rejects duplicate utterances and IDs.
+        scenarios = load_scenarios(merged_path)
+        for split in SPLITS:
+            write_jsonl(staged / f"{split}.jsonl", prepared_rows(scenarios, split))
+        if (staged / "test.jsonl").read_bytes() != (
+            work / "test.jsonl"
+        ).read_bytes():
+            raise ValueError("v0.2.6 experiment altered held-out test bytes")
+        hashes = {
+            key: hashlib.sha256((staged / key).read_bytes()).hexdigest()
+            for key in ("train.jsonl", "validation.jsonl", "test.jsonl",
+                        "scenarios.json")
+        }
+        (staged / "data_manifest.json").write_text(json.dumps({
+            "version": "v026", "experiment_only": True,
+            "training_is_not_started": True, "old_root_untouched": True,
+            "augmentation_source": str(extras_file),
+            "counts": {
+                split: len(prepared_rows(scenarios, split))
+                for split in SPLITS
+            }, "sha256": hashes,
+        }, indent=2) + "\n", encoding="utf-8")
+        staged.rename(target)
+        return target
+    except BaseException:
+        shutil.rmtree(staged)
+        raise
+
+
+
 def run(
     options_path: Path = OPTIONS,
     work: Path = WORK,
@@ -90,9 +166,9 @@ def run(
     if mode not in (
         "idle", "prepare", "download", "download_tokenizer",
         "download_base", "train", "calibrate", "calibrate_all", "export_local",
-        "evaluate_local", "build",
+        "evaluate_local", "diagnose_local", "prepare_experiment", "build",
     ):
-        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, calibrate_all, export_local, evaluate_local or build")
+        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, calibrate_all, export_local, evaluate_local, diagnose_local, prepare_experiment or build")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -117,6 +193,30 @@ def run(
     if mode == "prepare":
         prepare(work, scenarios)
         print("Prepared data under /share/needle-training.")
+        return 0
+    if mode == "prepare_experiment":
+        experiment = prepare_experiment(
+            work, scenarios, SCENARIOS.parent / "augmentation_v026.json",
+        )
+        print(f"Isolated experiment data prepared under {experiment}. "
+              "No training ran. Existing model and calibration retained.",
+              flush=True)
+        return 0
+    if mode == "diagnose_local":
+        report = work / "evaluation" / "test-report.json"
+        if not report.is_file():
+            raise FileNotFoundError(
+                f"Missing {report}; run evaluate_local first."
+            )
+        # Text-only read, no external engine, no JAX initialization.
+        run_command(
+            [sys.executable, "-u", "/app/local_diagnose.py", str(work)],
+            env={**os.environ, "HF_HUB_OFFLINE": "1",
+                 "TRANSFORMERS_OFFLINE": "1"},
+            max_ram_mib=ram,
+            reserve_memory_mib=reserve,
+            core=choose_cpu(cpu_core),
+        )
         return 0
 
     if available_ram_mib() < ram + reserve:
