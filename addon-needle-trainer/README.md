@@ -11,7 +11,7 @@ training isolated and manually controlled. No automated retraining,
 model replacement or HA service execution occurs.
 
 Read [DOCS.md](DOCS.md) before use. Full local workflow:
-**prepare → download → download_base → train → calibrate_all → export_local**. All steps run in the isolated trainer
+**prepare → download → download_base → train → calibrate_all → export_local → evaluate_local**. All steps run in the isolated trainer
 container and require manual confirmation; only the two downloads use
 the internet. The default bounded `calibrate` slice trains eight confidence-head examples
 per start. `calibrate_all` instead trains every remaining step in a single
@@ -59,3 +59,31 @@ manual restart after interruptions. The mode never runs automatically on
 boot, never exports a model, and never promotes a model for HA actions.
 `calibration_steps_per_run` remains relevant only to the bounded `calibrate`
 mode. See [DOCS.md](DOCS.md#continuous-resumable-confidence-calibration-v024).
+
+## v0.2.5: real held-out offline evaluation
+
+After `export_local`, select `mode: evaluate_local` for a read-only test
+that requires all 36 untouched six-language scenarios. This mode evaluates
+both `needle3.cact` (baseline) and the exported
+`candidate-local-confidence.cact` through the **native Needle 3 engine**
+bundled at image build time. It uses `Needle.complete()` with inert JSON
+tool descriptions and NEVER `Needle.run()` or any Home Assistant API.
+Tool calls in the outputs are **inspected only**, never executed.
+
+In a separate JAX pass it compares the trained confidence-head's scores on
+each held-out correct completion versus one deliberately wrong completion,
+reporting ranking accuracy, Brier score, and locale breakdown. Those head
+probabilities are *float32 pre-export diagnostics*, **not native combined
+confidence**, which is measured independently from the `.cact` engine.
+
+The full report is saved atomically to
+`/share/needle-training/evaluation/test-report.json`. A `NO_GO` verdict
+is expected if there is no increase in accepted correct actions versus the
+base, unsafe tool approval, regression in correct no-action rejections,
+missing native confidence, or insufficient measurement. The process exits
+with a nonzero status for `NO_GO` **after saving the report**; check
+the report even if the HA add-on job shows an error.
+
+Nothing is auto-approved. Even `CANDIDATE_FOR_MANUAL_REVIEW` is not
+permission to deploy to Home Assistant. See [DOCS.md](DOCS.md) for the
+interpretation and safety limitations.
