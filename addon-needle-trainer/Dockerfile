@@ -1,6 +1,7 @@
 # Standalone JAX environment: never install training dependencies into the
 # production Needle inference add-on.
-FROM python:3.11-slim-bookworm
+ARG PYTHON_BASE=python:3.11-slim-bookworm
+FROM ${PYTHON_BASE}
 ARG BUILD_ARCH=amd64
 ARG NEEDLE_VERSION=3.1.3
 
