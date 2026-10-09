@@ -42,7 +42,7 @@ jobs:
       - name: Check Python and curate training corpus
         run: |
           python -m compileall -q addon-needle-trainer/app
-          python addon-needle-trainer/app/training/workflow.py prepare --output "${RUNNER_TEMP}/needle-data"
+          python addon-needle-trainer/app/training/workflow.py prepare --scenarios addon-needle-trainer/app/training/scenarios.json --output "${RUNNER_TEMP}/needle-data"
       - name: Offline resource safety tests
         run: python -m unittest discover -s addon-needle-trainer/tests -v
 
