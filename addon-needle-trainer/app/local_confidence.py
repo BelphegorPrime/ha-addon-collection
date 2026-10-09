@@ -192,21 +192,51 @@ def _encoded(model_tokenizer, row: dict, max_len: int) -> np.ndarray:
     return np.asarray(ids + [PAD_ID] * (max_len - len(ids)), dtype=np.int32)
 
 
+def calibration_end_step(
+    current_step: int, total_steps: int, steps_per_run: int,
+    *, run_to_completion: bool = False,
+) -> int:
+    """Plan remaining work without ever changing the resume checkpoint.
+
+    The automatic mode uses exactly the same training examples and stored
+    weights as bounded calibration. Only the end index is different.
+    """
+    if not isinstance(run_to_completion, bool):
+        raise ValueError("run_to_completion must be boolean")
+    if not 1 <= steps_per_run <= 32:
+        raise ValueError("steps_per_run must be 1..32")
+    if type(current_step) is not int or type(total_steps) is not int:
+        raise ValueError("Calibration checkpoint steps must be integers")
+    if total_steps < 1 or not 0 <= current_step <= total_steps:
+        raise ValueError(
+            f"Invalid confidence checkpoint progress {current_step}/{total_steps}"
+        )
+    return (
+        total_steps if run_to_completion
+        else min(current_step + steps_per_run, total_steps)
+    )
+
+
 def run_calibration(
     work: Path, *,
     steps_per_run: int = 8,
     max_epochs: int = 2,
+    run_to_completion: bool = False,
     max_len: int = 384,
     learning_rate: float = 0.0001,
 ) -> dict:
-    """Execute a small bounded slice, saving trainable head after every step.
+    """Execute one bounded slice or all remaining steps, checkpointing each.
 
     Frozen LoRA-merged backbone; only confidence_head gradients are computed.
-    No upload or automatic promotion. Repeated starts continue with the next
-    slice; momentum-free SGD needs no unsafe optimizer-state deserialization.
+    No upload or automatic promotion. Interrupted runs resume from the last
+    fully saved step on a manual restart; momentum-free SGD needs no
+    optimizer-state deserialization. The automatic mode runs in *one*
+    subprocess invocation, never in a background scheduler.
     """
     if not 1 <= steps_per_run <= 32:
         raise ValueError("steps_per_run must be 1..32")
+    if not isinstance(run_to_completion, bool):
+        raise ValueError("run_to_completion must be boolean")
     if not 1 <= max_epochs <= 5 or not 128 <= max_len <= 768:
         raise ValueError("Invalid epochs or maximum sequence length")
     import jax
@@ -272,6 +302,30 @@ def run_calibration(
         head = params["confidence_head"]
         step = 0
 
+    maximum = max_epochs * len(sequences)
+    end = calibration_end_step(
+        step, maximum, steps_per_run, run_to_completion=run_to_completion,
+    )
+    print(
+        f"Confidence calibration: resuming from step {step}/{maximum}; "
+        f"running {end - step} step(s) in this one-shot job "
+        f"({'all remaining' if run_to_completion else 'bounded slice'}).",
+        flush=True,
+    )
+    if step == maximum:
+        print(
+            "Confidence calibration already complete; existing checkpoint "
+            "preserved. Export manually only after held-out evaluation.",
+            flush=True,
+        )
+        return {
+            "steps_complete": step,
+            "steps_total": maximum,
+            "finished": True,
+            "mean_slice_loss": None,
+            "head_checkpoint": str(progress),
+        }
+
     model = SimpleAttentionNetwork(config)
     # The upstream head method uses stop_gradient on hidden cells, keeping
     # the backbone frozen. Trainable pytree consists exclusively of head.
@@ -287,8 +341,6 @@ def run_calibration(
     # argument and is frozen: only head_params receive gradients.
     grad_fn = make_confidence_grad_fn(model)
     losses: list[float] = []
-    maximum = max_epochs * len(sequences)
-    end = min(step + steps_per_run, maximum)
     while step < end:
         # Rotate scenario order in a deterministic, reproducible way.
         index = (step * 73) % len(sequences)
@@ -385,6 +437,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("command", choices=("calibrate", "export"))
     parser.add_argument("work", type=Path)
     parser.add_argument("--steps", type=int, default=8)
+    parser.add_argument(
+        "--all", action="store_true",
+        help="Calibrate all remaining steps in this one-shot invocation; "
+             "continue from the atomic confidence_head.npz checkpoint",
+    )
     parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--max-len", type=int, default=384)
     args = parser.parse_args(argv)
@@ -392,9 +449,12 @@ def main(argv: list[str] | None = None) -> int:
         summary = run_calibration(
             args.work, steps_per_run=args.steps,
             max_epochs=args.epochs, max_len=args.max_len,
+            run_to_completion=args.all,
         )
         print(json.dumps(summary, sort_keys=True), flush=True)
     else:
+        if args.all:
+            parser.error("--all is only supported with calibrate")
         export_calibrated_candidate(args.work)
     return 0
 
