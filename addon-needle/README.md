@@ -37,3 +37,19 @@ For direct REST calls, example automations, configuration and troubleshooting,
 see the [full add-on documentation](DOCS.md). For an alternative setup using
 Home Assistant's built-in custom sentences rather than an LLM conversation
 agent, see the [manual Assist setup guide](FULL_ASSIST_SETUP.md).
+
+
+## Optional on-device multilingual training
+
+Want to run the Needle LLM multilingual training experiments on the
+**same Home Assistant OS host** without interrupting the Needle playground?
+Install the separate, **manual-only**
+[Needle Trainer (Experimental)](../addon-needle-trainer) from this add-on
+collection. It uses a different container so JAX is not installed in the
+production inference service. Its one-shot modes prepare the curated data,
+download the public training checkpoint on request and run CPU-only LoRA
+training under low scheduling priority and conservative resource checks.
+
+The trainer never substitutes a model in this add-on. A locally trained
+Needle LoRA model has no calibrated confidence head and therefore is **not**
+suitable for automatic HA device control with the unchanged 0.8 threshold.
