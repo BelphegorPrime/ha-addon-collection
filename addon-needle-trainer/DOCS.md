@@ -35,7 +35,9 @@ container and does not stop for these jobs.
 
 ### Options
 
-- `mode`: `idle` (default), `prepare`, `download`, `train` or `build`.
+- `mode`: `idle` (default), `prepare`, `download`,
+  `download_tokenizer`, `download_base`, `train`, `calibrate`,
+  `export_local` or `build`.
 - `confirm_resource_use`: mandatory `true` for non-idle modes.
 - `confirm_uncalibrated_export`: separately required for `build`.
 - `memory_limit_mib`: 2048–12288 (default 4096).
@@ -146,8 +148,12 @@ In the Needle Trainer add-on options, set
 
 1. `prepare` — writes 216 training, 36 validation and 36 test examples.
 2. `download` — fetches the **upstream** trainable
-   `needle3.safetensors` checkpoint once. Download is the only part
-   requiring an external connection.
+   `needle3.safetensors` checkpoint and the matching Needle 3
+   `tokenizer.model`/`tokenizer.vocab` once. The tokenizer files are
+   persisted under `/share/needle-training/tokenizer/` and restored into
+   the training container's installed Needle package before each offline
+   training/calibration run. Downloads are explicit; normal training stays
+   offline. Subsequent `download` runs reuse an existing checkpoint.
 3. `download_base` — fetches the matching
    `needle3.cact` base archive once (required for its tokenizer).
 4. `train` — trains the local LoRA adapter. Produces
@@ -258,3 +264,25 @@ in this add-on and may require more memory than weak HA hosts can spare.
 Upstream references:
 [Needle fine-tuning](https://www.cactuscompute.com/blog/finetuning-needle)
 and [Needle GitHub](https://github.com/cactus-compute/needle).
+
+## Recover from the offline tokenizer error (v0.2.1)
+
+If your log says `No pretraining tokenizer at .../needle/model/tokenizer.model`
+followed by `OfflineModeIsEnabled`, the trainable checkpoint was downloaded
+but Needle's separate tokenizer was not. The error does **not** mean you need
+to disable offline training or redownload the 242 MB checkpoint.
+
+1. Update the Needle Trainer add-on to **0.2.1**.
+2. Set `mode: download_tokenizer` and
+   `confirm_resource_use: true`, then manually start the add-on once.
+3. Check that it wrote
+   `/share/needle-training/tokenizer/tokenizer.model` and
+   `/share/needle-training/tokenizer/tokenizer.vocab`.
+4. Set `mode: train` and start the add-on again. It reinstalls both files
+   from the shared directory before starting JAX, with `HF_HUB_OFFLINE=1`.
+5. For subsequent `calibrate` runs, the same offline restoration happens
+   automatically. The shared files survive trainer image updates.
+
+You may also simply rerun `mode: download`: when
+`needle3.safetensors` already exists, only the missing tokenizer assets
+are fetched. No network access occurs during `train` or `calibrate`.
