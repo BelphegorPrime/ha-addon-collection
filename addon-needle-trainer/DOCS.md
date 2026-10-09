@@ -116,3 +116,61 @@ If a qualifying model is present, Needle chooses it on its next restart,
 not during active voice requests. If the files are missing or fail the
 verification checks, Needle continues to use the bundled base model.
 See [Needle model approval](../addon-needle/DOCS.md#automatic-selection-of-approved-trained-models).
+
+
+## How to obtain a confidence-capable `approved.cact`
+
+**`experimental-uncalibrated.cact` cannot be promoted by renaming.**
+The upstream local `needle finetune` LoRA workflow does not train the
+confidence head; `needle build --lora` removes it from the exported model.
+Changing the filename or creating an approval JSON file cannot fix that.
+
+The currently supported confidence-preserving approach is **Needle Platform
+Fine-Tuning**. This is a separate, explicit, potentially billable hosted
+training workflow. It uploads your train/validation/test JSONL files to
+Needle Platform and trains/calibrates the confidence head along with the
+model. It is **not run automatically by this add-on**, and no credentials
+are collected by this add-on. The curated synthetic corpus contains no
+personal HA entities. Do not upload real household data without inspecting
+and consenting to the data transfer and costs.
+
+On a trusted machine with the pinned Needle CLI and an API key created
+by the user in the Needle Platform console, run:
+
+```bash
+export NEEDLE_API_KEY="your-key-from-needle-console"
+needle platform finetune \
+  train.jsonl validation.jsonl test.jsonl \
+  --suffix ha-assist \
+  --out ./platform-models
+```
+
+Use the three generated files copied from `/share/needle-training`. Do
+not paste your actual API key into repository files or Home Assistant
+logs. The platform returns a new calibrated model; it does *not*
+repair the existing local LoRA export.
+
+Before promotion, host the candidate on a **separate temporary Needle
+inference endpoint**, run the held-out six-language benchmark with
+`training/workflow.py evaluate`, and inspect unsafe approvals, rejection
+accuracy, missing scores and latency. Benchmarking or approving a model
+must never call actual Home Assistant services.
+
+Only after an independently verified confidence head, acceptable metrics
+and manual review should the calibrated `.cact` be copied to
+`/share/needle-training/approved.cact` together with a matching
+`approved.json` containing its SHA256 and truthful measured safety
+results. The inference add-on's
+[model selection guide](../addon-needle/DOCS.md#automatic-selection-of-approved-trained-models)
+documents the metadata schema. The JSON manifest is **not** a
+cryptographic proof of safety and cannot create a missing confidence
+head. Restart the regular Needle add-on to pick up the new files.
+
+A fully local alternative would require modifying Needle itself to
+train and export its confidence head, followed by post-training
+probability calibration and held-out evaluation. That is not implemented
+in this add-on and may require more memory than weak HA hosts can spare.
+
+Upstream references:
+[Needle fine-tuning](https://www.cactuscompute.com/blog/finetuning-needle)
+and [Needle GitHub](https://github.com/cactus-compute/needle).
