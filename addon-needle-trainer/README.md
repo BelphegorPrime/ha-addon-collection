@@ -29,3 +29,14 @@ Needle 3 `tokenizer.model` and `tokenizer.vocab` into
 `/share/needle-training/tokenizer/`. If you already have the checkpoint but
 training failed with `HF_HUB_OFFLINE=1`, select `download_tokenizer` once,
 then return to `train`. No checkpoint redownload is required.
+
+
+**v0.2.2 JAX compilation memory fix:** The old `memory_limit_mib`
+was a virtual-address-space `RLIMIT_AS` which could crash XLA compilation
+with `RESOURCE_EXHAUSTED: Failed to allocate buffer for Literal`.
+The trainer now permits normal virtual address mappings while monitoring
+actual resident RAM (including child workers) and the free-RAM reserve for
+Home Assistant. It terminates the training subprocess group if either
+budget is crossed. The monitor is best effort, **not a kernel-enforced
+cgroup limit**; available memory and strict RSS guarantees depend on the
+host OS and may still require a separate Linux container or host.
