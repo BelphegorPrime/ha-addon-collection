@@ -89,9 +89,9 @@ def run(
     mode = opts.get("mode", "idle")
     if mode not in (
         "idle", "prepare", "download", "download_tokenizer",
-        "download_base", "train", "calibrate", "export_local", "build",
+        "download_base", "train", "calibrate", "calibrate_all", "export_local", "build",
     ):
-        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, export_local or build")
+        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, calibrate_all, export_local or build")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -179,7 +179,7 @@ def run(
                 "--lora", str(adapter),
                 "--out", str(work / "experimental-uncalibrated.cact"),
             ]
-        elif mode in ("calibrate", "export_local"):
+        elif mode in ("calibrate", "calibrate_all", "export_local"):
             env["HF_HUB_OFFLINE"] = "1"
             env["TRANSFORMERS_OFFLINE"] = "1"
             if not (work / "needle_lora.safetensors").is_file():
@@ -199,6 +199,10 @@ def run(
                     "--steps", str(calibration_steps),
                     "--epochs", str(calibration_epochs),
                 ]
+                if mode == "calibrate_all":
+                    # Existing atomic progress is resumed; no extra
+                    # invocations, downloads, exports or auto-approval.
+                    cmd.append("--all")
         else:
             env["HF_HUB_OFFLINE"] = "1"
             env["TRANSFORMERS_OFFLINE"] = "1"
@@ -229,7 +233,7 @@ def run(
         "Watchdog sampling is best-effort, not a hard cgroup quota.",
         flush=True,
     )
-    if mode in ("train", "calibrate"):
+    if mode in ("train", "calibrate", "calibrate_all"):
         # Upstream Needle loads tokenizer.model only from its installed
         # package directory. Restore it from persistent /share *before*
         # the expensive JAX startup, with network access still disabled.
@@ -273,10 +277,11 @@ def run(
             from tokenizer_assets import verify_assets
 
             verify_assets(work)
-    elif mode == "calibrate":
+    elif mode in ("calibrate", "calibrate_all"):
         print(
-            "Confidence training slice saved; run calibrate again to "
-            "continue, or export_local only after all steps are complete.",
+            "Confidence training progress saved under /share/needle-training. "
+            "Check the finished flag before using export_local; "
+            "no model was deployed or approved.",
             flush=True,
         )
     elif mode == "export_local":
