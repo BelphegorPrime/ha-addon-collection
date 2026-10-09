@@ -118,7 +118,91 @@ verification checks, Needle continues to use the bundled base model.
 See [Needle model approval](../addon-needle/DOCS.md#automatic-selection-of-approved-trained-models).
 
 
-## How to obtain a confidence-capable `approved.cact`
+
+## Fully local confidence-head training (experimental, v0.2.0)
+
+The previous local Needle LoRA exporter dropped the confidence head.
+The optional new `calibrate` and `export_local` modes implement a
+**fully local alternative** without Needle Platform or any external API.
+
+The calibration uses JAX on the same HA host, holds the fine-tuned
+transformer weights frozen, and trains only the existing confidence
+head. For each synthetic training example, it supplies both a **correct**
+completed call and a **deliberately incorrect** competing call, using
+binary cross-entropy. No real HA actions or data are used. The prompt
+**plus the completed tool call** is the head input, matching its intended
+post-hoc role in Needle. There is no remote data generation or upload.
+
+This is a **custom experimental extension**, not a built-in, upstream-
+supported confidence-calibration feature. Its scores are not considered
+safe or well calibrated until independently measured on withheld data.
+The other Needle confidence term, tool-call decode probability, can
+still be below 0.8 even if the head improves.
+
+### Entirely local steps inside Home Assistant
+
+In the Needle Trainer add-on options, set
+`confirm_resource_use: true` and manually start each mode in order:
+
+1. `prepare` — writes 216 training, 36 validation and 36 test examples.
+2. `download` — fetches the **upstream** trainable
+   `needle3.safetensors` checkpoint once. Download is the only part
+   requiring an external connection.
+3. `download_base` — fetches the matching
+   `needle3.cact` base archive once (required for its tokenizer).
+4. `train` — trains the local LoRA adapter. Produces
+   `needle_lora.safetensors`.
+5. `calibrate` — trains a **small bounded slice** of the confidence
+   head with both correct and incorrect completed tool calls.
+   Defaults: 8 steps, one batch at a time, one low-priority logical CPU.
+   Each step is saved atomically in `confidence_head.npz`. Restart
+   `calibrate` to resume from the next step. The options
+   `calibration_steps_per_run` (1–32) and `calibration_epochs` (1–5)
+   control slice size and total training amount. Keep the epoch setting
+   unchanged while resuming.
+6. `export_local` — requires **all** confidence-training steps to
+   finish. Combines the LoRA-merged transformer and locally trained
+   confidence head into
+   `/share/needle-training/candidate-local-confidence.cact`.
+   Export is completely offline and does not use the upstream
+   `needle build --lora` command (which discards the head).
+
+Afterwards set `mode: idle` and
+`confirm_resource_use: false`.
+
+The small-step approach allows you to stop after any slice and perform
+the next one when your Home Assistant host is less busy. Each training
+start still loads the JAX model and may require significant RAM and
+compilation time. The memory reserve check, CPU affinity, low process
+priority and virtual memory cap remain in force; if the host cannot
+support a slice, it fails without modifying production inference.
+
+### Validation and promotion
+
+**A model with a trained confidence head is not yet a calibrated or
+safe model.** Its final confidence also depends on decode probability.
+
+The local candidate is **never** named `approved.cact` automatically.
+Test it on an isolated Needle instance against both the validation and
+**untouched** test JSONL data and the exact tool descriptions used
+in Home Assistant. Measure by language, refusal correctness, dangerous
+commands, missing/nonfinite confidence, real end-to-end latency, and
+approved-incorrect actions.
+
+When, and only when, an independent reviewer verifies an acceptably
+calibrated head and zero unsafe actions on the acceptance suite, copy
+`candidate-local-confidence.cact` to `approved.cact`, calculate
+its SHA256 and complete a truthful `approved.json` manifest as described
+by the inference add-on docs. Restart the inference add-on to detect it.
+Never forge a `confidence_head: verified` manifest to circumvent a
+failed benchmark.
+
+This local route does **not** require the paid Needle Platform,
+but it is experimental and has not been measured on your actual CPU yet.
+The hosted Platform route below is optional, not a prerequisite.
+
+
+## Optional hosted alternative to local calibration
 
 **`experimental-uncalibrated.cact` cannot be promoted by renaming.**
 The upstream local `needle finetune` LoRA workflow does not train the
