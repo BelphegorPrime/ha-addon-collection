@@ -20,7 +20,13 @@ computer or Docker CLI.
 6. Set `mode: train`, save and start again. This uses the local checkpoint
    and curated synthetic training data. It writes
    `/share/needle-training/needle_lora.safetensors`.
-7. **Set `mode: idle` and `confirm_resource_use: false` after finishing**
+7. Optional experimental export: set `mode: build` and
+   `confirm_uncalibrated_export: true`. This converts the LoRA adapter into
+   `/share/needle-training/experimental-uncalibrated.cact`. Upstream's build
+   command downloads a public base archive, so this mode intentionally
+   uses network access. It is **not a deployable approval model** because its
+   confidence head is missing.
+8. **Set `mode: idle` and `confirm_resource_use: false` after finishing**
    to avoid accidentally rerunning the job on manual restart.
 
 All jobs run once and exit. There is no web-accessible training API and no
@@ -29,8 +35,9 @@ container and does not stop for these jobs.
 
 ### Options
 
-- `mode`: `idle` (default), `prepare`, `download` or `train`.
+- `mode`: `idle` (default), `prepare`, `download`, `train` or `build`.
 - `confirm_resource_use`: mandatory `true` for non-idle modes.
+- `confirm_uncalibrated_export`: separately required for `build`.
 - `memory_limit_mib`: 2048–12288 (default 4096).
 - `reserve_memory_mib`: 1024–16384 (default 2048), minimum available host
   RAM that must remain free *before* starting.
@@ -64,8 +71,8 @@ experimental starting point rather than verified production training data.
 
 The `train` mode is deliberately offline: an explicitly supplied local
 checkpoint, `--generate 0`, `--workers 1`, and offline Hugging Face
-environment settings ensure no remote training-data generation. `download`
-is the only mode that intentionally contacts a remote model host.
+environment settings ensure no remote training-data generation. Both `download`
+and the optional `build` export mode contact external model hosts.
 
 **Do not select a locally fine-tuned `.cact` archive in the live Needle
 add-on.** Upstream Needle deliberately omits the confidence head from local
@@ -83,3 +90,29 @@ Source of the corpus and benchmark tool:
 [ha-needle-llm training](https://github.com/BelphegorPrime/ha-needle-llm/tree/master/training).
 The bundled files are a pinned snapshot; update them in sync when changing
 the training dataset.
+
+
+## Delivery to the Needle inference add-on
+
+The regular [Needle inference add-on](../addon-needle) checks
+`/share/needle-training/approved.cact` and its corresponding
+`approved.json` manifest on **startup** if `auto_trained_weights: true`.
+It does not need a separate upload: the two add-ons use the same
+Home Assistant `/share` directory. Set `weights: ""` to permit automatic
+selection; a manually configured `weights` always has priority.
+
+The local `needle_lora.safetensors` and
+`experimental-uncalibrated.cact` files are **intentionally not discovered**.
+The upstream local LoRA-to-`.cact` exporter discards the confidence head,
+so it cannot meet the automatic-device-approval threshold of 0.8.
+
+A future confidence-capable, independently benchmarked Needle model can
+be promoted into that directory as `approved.cact` along with its review
+manifest. The model's SHA256 must match the manifest. Do not rename the local
+experimental export to `approved.cact` or forge a manifest: that would
+not restore the missing confidence head.
+
+If a qualifying model is present, Needle chooses it on its next restart,
+not during active voice requests. If the files are missing or fail the
+verification checks, Needle continues to use the bundled base model.
+See [Needle model approval](../addon-needle/DOCS.md#automatic-selection-of-approved-trained-models).
