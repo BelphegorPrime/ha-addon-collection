@@ -196,7 +196,7 @@ def run(
         return 0
     if mode == "prepare_experiment":
         experiment = prepare_experiment(
-            work, scenarios, SCENARIOS.parent / "augmentation_v026.json",
+            work, scenarios, scenarios.parent / "augmentation_v026.json",
         )
         print(f"Isolated experiment data prepared under {experiment}. "
               "No training ran. Existing model and calibration retained.",
