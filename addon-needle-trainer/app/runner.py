@@ -14,6 +14,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from experiment_pipeline import (
+    ensure_frozen_baselines,
+    start_training_snapshot,
+    validate_experiment,
+    validate_test_unsealing,
+    verify_training_snapshot,
+)
 from resource_guard import run_bounded
 from training.workflow import LANGUAGES, SPLITS, load_scenarios, prepared_rows, write_jsonl
 
@@ -167,8 +174,10 @@ def run(
         "idle", "prepare", "download", "download_tokenizer",
         "download_base", "train", "calibrate", "calibrate_all", "export_local",
         "evaluate_local", "diagnose_local", "prepare_experiment", "build",
+        "experiment_train", "experiment_calibrate_all", "experiment_export",
+        "experiment_validate", "experiment_test",
     ):
-        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, calibrate_all, export_local, evaluate_local, diagnose_local, prepare_experiment or build")
+        raise ValueError(f"Unsupported Needle Trainer mode: {mode}")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -246,6 +255,35 @@ def run(
     })
     checkpoint = work / "needle3.safetensors"
 
+    experiment_modes = (
+        "experiment_train", "experiment_calibrate_all", "experiment_export",
+        "experiment_validate", "experiment_test",
+    )
+    if mode in experiment_modes:
+        # Re-check the immutable staged dataset on EVERY invocation.
+        experiment = validate_experiment(work)
+        model_hashes = ensure_frozen_baselines(work, experiment)
+        if mode == "experiment_train":
+            start_training_snapshot(experiment, model_hashes, epochs=epochs)
+        else:
+            verify_training_snapshot(experiment, model_hashes)
+            if not (experiment / "needle_lora.safetensors").is_file():
+                raise FileNotFoundError("Run experiment_train first; LoRA missing")
+            if mode in ("experiment_validate", "experiment_test"):
+                for required in ("candidate-local-confidence.cact", "confidence_head.npz"):
+                    if not (experiment / required).is_file():
+                        raise FileNotFoundError(
+                            f"Missing experiment/{required}; calibrate and export first"
+                        )
+            if mode == "experiment_export" and (
+                experiment / "candidate-local-confidence.cact"
+            ).exists():
+                raise FileExistsError("Experiment model already exported; refusing overwrite")
+            if mode == "experiment_test":
+                # Test remains sealed until an independently successful
+                # VALIDATION report for the *same* model is present.
+                validate_test_unsealing(experiment)
+
     tokenizer_command = [
         sys.executable, "-u", "/app/tokenizer_assets.py", "download",
         str(work),
@@ -265,7 +303,45 @@ def run(
             raise FileNotFoundError(
                 f"Missing {checkpoint}; run mode=download first."
             )
-        if mode == "build":
+        if mode in experiment_modes:
+            env["HF_HUB_OFFLINE"] = "1"
+            env["TRANSFORMERS_OFFLINE"] = "1"
+            if mode == "experiment_train":
+                cmd = [
+                    "needle", "finetune", str(experiment / "train.jsonl"),
+                    "--checkpoint", str(checkpoint),
+                    "--epochs", str(epochs),
+                    "--batch-size", "1",
+                    "--max-len", "384",
+                    "--lora-rank", "4",
+                    "--lora-alpha", "8",
+                    "--generate", "0",
+                    "--workers", "1",
+                    "--val-split", "0",
+                    "--seed", "42",
+                    "--checkpoint-dir", str(experiment / "checkpoints"),
+                    "--out", str(experiment / "needle_lora.safetensors"),
+                ]
+            elif mode == "experiment_calibrate_all":
+                cmd = [
+                    sys.executable, "-u", "/app/local_confidence.py",
+                    "calibrate", str(experiment),
+                    "--steps", str(calibration_steps),
+                    "--epochs", str(calibration_epochs), "--all",
+                ]
+            elif mode == "experiment_export":
+                cmd = [
+                    sys.executable, "-u", "/app/local_confidence.py",
+                    "export", str(experiment),
+                    "--epochs", str(calibration_epochs),
+                ]
+            else:
+                cmd = [
+                    sys.executable, "-u", "/app/local_evaluate.py",
+                    str(experiment), "--split",
+                    "validation" if mode == "experiment_validate" else "test",
+                ]
+        elif mode == "build":
             # Upstream Needle build *always* downloads the original archive
             # with fetch_weights(force=True), even with a local checkpoint.
             # The built LoRA model drops its confidence head and is NEVER
@@ -352,7 +428,11 @@ def run(
         "Watchdog sampling is best-effort, not a hard cgroup quota.",
         flush=True,
     )
-    if mode in ("train", "calibrate", "calibrate_all", "evaluate_local"):
+    if mode in (
+        "train", "calibrate", "calibrate_all", "evaluate_local",
+        "experiment_train", "experiment_calibrate_all",
+        "experiment_validate", "experiment_test",
+    ):
         # Upstream Needle loads tokenizer.model only from its installed
         # package directory. Restore it from persistent /share *before*
         # the expensive JAX startup, with network access still disabled.
@@ -420,6 +500,29 @@ def run(
             "evaluation. It is NOT deployed or auto-approved.",
             flush=True,
         )
+    elif mode == "experiment_train":
+        if not (experiment / "needle_lora.safetensors").is_file():
+            raise RuntimeError("Experiment finetune did not produce a local adapter")
+        print(f"Experiment LoRA ready: {experiment / 'needle_lora.safetensors'}. "
+              "Original candidate and checkpoint unchanged; calibrate next.",
+              flush=True)
+    elif mode == "experiment_calibrate_all":
+        print(f"Experiment confidence checkpoint saved under {experiment}. "
+              "Check finished=true before experiment_export.", flush=True)
+    elif mode == "experiment_export":
+        if not (experiment / "candidate-local-confidence.cact").is_file():
+            raise RuntimeError("Experiment export did not create its candidate")
+        print("New candidate exported to experiment only. "
+              "Run experiment_validate before considering held-out test.",
+              flush=True)
+    elif mode in ("experiment_validate", "experiment_test"):
+        suffix = "validation" if mode == "experiment_validate" else "test"
+        report = experiment / "evaluation" / f"{suffix}-report.json"
+        if not report.is_file():
+            raise RuntimeError(f"Experiment evaluation omitted report: {report}")
+        print(f"Read-only experiment {suffix} report: {report}. "
+              "NO automatic approval or Home Assistant action.",
+              flush=True)
     elif mode == "build":
         if not (work / "experimental-uncalibrated.cact").is_file():
             raise RuntimeError("Build succeeded without producing a .cact archive")
