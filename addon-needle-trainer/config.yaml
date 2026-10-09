@@ -15,13 +15,15 @@ map:
 options:
   mode: "idle"
   confirm_resource_use: false
+  confirm_uncalibrated_export: false
   memory_limit_mib: 4096
   reserve_memory_mib: 2048
   cpu_core: -1
   epochs: 1
 schema:
-  mode: "list(idle|prepare|download|train)"
+  mode: "list(idle|prepare|download|train|build)"
   confirm_resource_use: bool
+  confirm_uncalibrated_export: bool
   memory_limit_mib: int
   reserve_memory_mib: int
   cpu_core: int
