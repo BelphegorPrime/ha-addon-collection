@@ -79,7 +79,7 @@ class TrainerTests(unittest.TestCase):
             patch.object(runner, "available_ram_mib", return_value=20000),
             patch.object(runner, "choose_cpu", return_value=0),
         ):
-            with self.assertRaisesRegex(FileNotFoundError, "checkpoint"):
+            with self.assertRaisesRegex(FileNotFoundError, "needle3.safetensors"):
                 self.invoke()
 
     def test_train_is_strictly_low_resource_and_offline(self) -> None:
@@ -148,6 +148,41 @@ class TrainerTests(unittest.TestCase):
             self.assertEqual(runner.choose_cpu(4), 4)
             with self.assertRaises(ValueError):
                 runner.choose_cpu(1)
+
+
+    def test_build_requires_separate_approval(self) -> None:
+        self.save(mode="build", confirm_resource_use=True)
+        with patch.object(runner, "run_command") as executor:
+            with self.assertRaisesRegex(
+                ValueError, "confirm_uncalibrated_export"
+            ):
+                self.invoke()
+        executor.assert_not_called()
+
+    def test_build_writes_only_uncalibrated_archive(self) -> None:
+        self.save(
+            mode="build",
+            confirm_resource_use=True,
+            confirm_uncalibrated_export=True,
+        )
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        (self.work / "needle_lora.safetensors").write_bytes(b"adapter")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=0),
+            patch.object(runner, "run_command") as executor,
+        ):
+            def fake_export(*args, **kwargs):
+                (self.work / "experimental-uncalibrated.cact").write_bytes(
+                    b"uncalibrated-model"
+                )
+            executor.side_effect = fake_export
+            self.assertEqual(self.invoke(), 0)
+        args = executor.call_args.args[0]
+        self.assertEqual(args[:2], ["needle", "build"])
+        self.assertIn("experimental-uncalibrated.cact", args[-1])
+        self.assertFalse((self.work / "approved.cact").exists())
 
 
 if __name__ == "__main__":
