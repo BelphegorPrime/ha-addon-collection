@@ -1,0 +1,734 @@
+{
+  "schema_version": 1,
+  "locales": [
+    "de",
+    "en",
+    "fr",
+    "es",
+    "it",
+    "nl"
+  ],
+  "description": "Synthetic curated action-only routing scenarios. No personal device names or real addresses.",
+  "scenarios": [
+    {
+      "scenario_id": "p01",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Schalte das Licht im Wohnzimmer an",
+        "en": "Turn on the living room lights",
+        "fr": "Allume la lumière du salon",
+        "es": "Enciende la luz del salón",
+        "it": "Accendi la luce in soggiorno",
+        "nl": "Doe het licht in de woonkamer aan"
+      }
+    },
+    {
+      "scenario_id": "p02",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Mach das Küchenlicht aus",
+        "en": "Switch off the kitchen lights",
+        "fr": "Éteins la lumière de la cuisine",
+        "es": "Apaga la luz de la cocina",
+        "it": "Spegni la luce in cucina",
+        "nl": "Doe het keukenlicht uit"
+      }
+    },
+    {
+      "scenario_id": "p03",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Bitte Bürobeleuchtung einschalten",
+        "en": "Please enable the office lighting",
+        "fr": "Active l'éclairage du bureau, s'il te plaît",
+        "es": "Enciende la iluminación de la oficina, por favor",
+        "it": "Per favore accendi le luci dello studio",
+        "nl": "Zet alsjeblieft de kantoorverlichting aan"
+      }
+    },
+    {
+      "scenario_id": "p04",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Licht im Flur abschalten",
+        "en": "Turn off the hallway lighting",
+        "fr": "Coupe la lumière du couloir",
+        "es": "Apaga las luces del pasillo",
+        "it": "Disattiva la luce nel corridoio",
+        "nl": "Schakel de verlichting in de gang uit"
+      }
+    },
+    {
+      "scenario_id": "p05",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Die Nachttischlampe soll an",
+        "en": "I want the bedside lamp on",
+        "fr": "Je veux la lampe de chevet allumée",
+        "es": "Quiero encendida la lámpara de noche",
+        "it": "Vorrei accesa la lampada sul comodino",
+        "nl": "Ik wil het nachtlampje aan"
+      }
+    },
+    {
+      "scenario_id": "p06",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Kannst du die Terrassenlampe ausmachen?",
+        "en": "Could you switch the patio lamp off?",
+        "fr": "Peux-tu éteindre la lampe de la terrasse ?",
+        "es": "¿Puedes apagar la lámpara de la terraza?",
+        "it": "Puoi spegnere la luce della terrazza?",
+        "nl": "Kun je de terraslamp uitzetten?"
+      }
+    },
+    {
+      "scenario_id": "p07",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Licht an im Bad",
+        "en": "Lights on in the bathroom",
+        "fr": "Lumière allumée dans la salle de bain",
+        "es": "Luz encendida en el baño",
+        "it": "Luci accese in bagno",
+        "nl": "Licht aan in de badkamer"
+      }
+    },
+    {
+      "scenario_id": "p08",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Bitte alle Lampen im Schlafzimmer ausschalten",
+        "en": "Please turn off every bedroom lamp",
+        "fr": "Éteins toutes les lampes de la chambre",
+        "es": "Apaga todas las lámparas del dormitorio",
+        "it": "Spegni tutte le lampade della camera",
+        "nl": "Zet alle lampen in de slaapkamer uit"
+      }
+    },
+    {
+      "scenario_id": "p09",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Bitte das Haustürschloss öffnen",
+        "en": "Please unlock the front door",
+        "fr": "Déverrouille la porte d'entrée",
+        "es": "Desbloquea la puerta principal",
+        "it": "Sblocca la porta d'ingresso",
+        "nl": "Ontgrendel de voordeur"
+      }
+    },
+    {
+      "scenario_id": "p10",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Schalte das Licht nicht ein",
+        "en": "Do not turn on the lights",
+        "fr": "N'allume pas la lumière",
+        "es": "No enciendas la luz",
+        "it": "Non accendere la luce",
+        "nl": "Doe het licht niet aan"
+      }
+    },
+    {
+      "scenario_id": "p11",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Ist das Küchenlicht eingeschaltet?",
+        "en": "Are the kitchen lights on?",
+        "fr": "La lumière de la cuisine est-elle allumée ?",
+        "es": "¿Está encendida la luz de la cocina?",
+        "it": "La luce in cucina è accesa?",
+        "nl": "Staat het keukenlicht aan?"
+      }
+    },
+    {
+      "scenario_id": "p12",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Stell die Helligkeit im Büro auf 40 Prozent",
+        "en": "Set the office brightness to 40 percent",
+        "fr": "Règle la luminosité du bureau à 40 %",
+        "es": "Pon la luminosidad de la oficina al 40 %",
+        "it": "Imposta la luminosità dello studio al 40%",
+        "nl": "Stel de helderheid van het kantoor in op 40 procent"
+      }
+    },
+    {
+      "scenario_id": "l01",
+      "split": "train",
+      "family": "locks",
+      "expected_action": "lock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Verriegle das Gartentor",
+        "en": "Lock the garden gate",
+        "fr": "Verrouille le portail du jardin",
+        "es": "Cierra con llave la verja del jardín",
+        "it": "Chiudi a chiave il cancello del giardino",
+        "nl": "Doe het tuinhek op slot"
+      }
+    },
+    {
+      "scenario_id": "l02",
+      "split": "train",
+      "family": "locks",
+      "expected_action": "unlock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Entriegle die Kellertür",
+        "en": "Unlock the basement door",
+        "fr": "Déverrouille la porte de la cave",
+        "es": "Abre la cerradura de la puerta del sótano",
+        "it": "Sblocca la porta della cantina",
+        "nl": "Ontgrendel de kelderdeur"
+      }
+    },
+    {
+      "scenario_id": "l03",
+      "split": "train",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Verriegle die Haustür bitte nicht",
+        "en": "Please don't lock the front door",
+        "fr": "Ne verrouille pas la porte d'entrée",
+        "es": "No cierres con llave la puerta principal",
+        "it": "Non chiudere a chiave la porta d'ingresso",
+        "nl": "Doe de voordeur alsjeblieft niet op slot"
+      }
+    },
+    {
+      "scenario_id": "l04",
+      "split": "train",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Ist die Haustür abgeschlossen?",
+        "en": "Is the front door locked?",
+        "fr": "La porte d'entrée est-elle verrouillée ?",
+        "es": "¿Está cerrada con llave la puerta principal?",
+        "it": "La porta d'ingresso è chiusa a chiave?",
+        "nl": "Zit de voordeur op slot?"
+      }
+    },
+    {
+      "scenario_id": "c01",
+      "split": "train",
+      "family": "covers",
+      "expected_action": "open_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Fahr den Rollladen im Büro hoch",
+        "en": "Raise the office blind",
+        "fr": "Remonte le volet du bureau",
+        "es": "Sube la persiana de la oficina",
+        "it": "Alza la tapparella dello studio",
+        "nl": "Doe het rolluik op kantoor omhoog"
+      }
+    },
+    {
+      "scenario_id": "c02",
+      "split": "train",
+      "family": "covers",
+      "expected_action": "close_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Schließe die Jalousie im Schlafzimmer",
+        "en": "Close the bedroom blind",
+        "fr": "Ferme le store de la chambre",
+        "es": "Baja la persiana del dormitorio",
+        "it": "Chiudi la veneziana della camera",
+        "nl": "Sluit de jaloezie in de slaapkamer"
+      }
+    },
+    {
+      "scenario_id": "c03",
+      "split": "train",
+      "family": "covers",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Öffne das Garagentor nicht",
+        "en": "Do not open the garage door",
+        "fr": "N'ouvre pas la porte du garage",
+        "es": "No abras la puerta del garaje",
+        "it": "Non aprire la porta del garage",
+        "nl": "Open de garagedeur niet"
+      }
+    },
+    {
+      "scenario_id": "c04",
+      "split": "train",
+      "family": "covers",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Wie weit ist der Rollladen geöffnet?",
+        "en": "How far open is the blind?",
+        "fr": "À quel point le volet est-il ouvert ?",
+        "es": "¿Cuánto está abierta la persiana?",
+        "it": "Quanto è aperta la tapparella?",
+        "nl": "Hoe ver is het rolluik open?"
+      }
+    },
+    {
+      "scenario_id": "t01",
+      "split": "train",
+      "family": "timers",
+      "expected_action": "start_timer",
+      "risk": "normal",
+      "utterances": {
+        "de": "Starte einen Timer für fünf Minuten",
+        "en": "Start a timer for five minutes",
+        "fr": "Démarre un minuteur de cinq minutes",
+        "es": "Inicia un temporizador de cinco minutos",
+        "it": "Avvia un timer di cinque minuti",
+        "nl": "Start een timer van vijf minuten"
+      }
+    },
+    {
+      "scenario_id": "t02",
+      "split": "train",
+      "family": "timers",
+      "expected_action": "cancel_timer",
+      "risk": "normal",
+      "utterances": {
+        "de": "Brich den Küchentimer ab",
+        "en": "Cancel the kitchen timer",
+        "fr": "Annule le minuteur de cuisine",
+        "es": "Cancela el temporizador de cocina",
+        "it": "Annulla il timer della cucina",
+        "nl": "Annuleer de keukentimer"
+      }
+    },
+    {
+      "scenario_id": "t03",
+      "split": "train",
+      "family": "timers",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Wie lange läuft mein Timer noch?",
+        "en": "How much time is left on my timer?",
+        "fr": "Combien de temps reste-t-il sur mon minuteur ?",
+        "es": "¿Cuánto tiempo queda en mi temporizador?",
+        "it": "Quanto tempo resta sul timer?",
+        "nl": "Hoelang duurt mijn timer nog?"
+      }
+    },
+    {
+      "scenario_id": "t04",
+      "split": "train",
+      "family": "timers",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Starte keinen Timer",
+        "en": "Do not start a timer",
+        "fr": "Ne démarre aucun minuteur",
+        "es": "No inicies ningún temporizador",
+        "it": "Non avviare un timer",
+        "nl": "Start geen timer"
+      }
+    },
+    {
+      "scenario_id": "p13",
+      "split": "validation",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Mach im Esszimmer das Licht an",
+        "en": "Switch on the dining-room light",
+        "fr": "Allume la lumière dans la salle à manger",
+        "es": "Enciende la luz del comedor",
+        "it": "Accendi la luce in sala da pranzo",
+        "nl": "Doe het licht in de eetkamer aan"
+      }
+    },
+    {
+      "scenario_id": "p14",
+      "split": "validation",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Ich möchte die Stehlampe ausgeschaltet haben",
+        "en": "I'd like the floor lamp turned off",
+        "fr": "Je voudrais éteindre le lampadaire",
+        "es": "Quiero apagar la lámpara de pie",
+        "it": "Vorrei spegnere la piantana",
+        "nl": "Ik wil de staande lamp uitzetten"
+      }
+    },
+    {
+      "scenario_id": "p15",
+      "split": "validation",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Schalte nicht die Haustür frei",
+        "en": "Don't unlock the front door",
+        "fr": "Ne déverrouille pas la porte d'entrée",
+        "es": "No desbloquees la puerta principal",
+        "it": "Non sbloccare la porta di ingresso",
+        "nl": "Ontgrendel de voordeur niet"
+      }
+    },
+    {
+      "scenario_id": "l05",
+      "split": "validation",
+      "family": "locks",
+      "expected_action": "unlock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Schließe das Fahrradschloss auf",
+        "en": "Unlock the bicycle lock",
+        "fr": "Déverrouille l'antivol du vélo",
+        "es": "Abre el candado de la bicicleta",
+        "it": "Sblocca il lucchetto della bici",
+        "nl": "Open het fietsslot"
+      }
+    },
+    {
+      "scenario_id": "c05",
+      "split": "validation",
+      "family": "covers",
+      "expected_action": "close_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Lass die Markise einfahren",
+        "en": "Retract the awning",
+        "fr": "Rentre le store banne",
+        "es": "Recoge el toldo",
+        "it": "Ritira la tenda da sole",
+        "nl": "Trek de zonwering in"
+      }
+    },
+    {
+      "scenario_id": "t05",
+      "split": "validation",
+      "family": "timers",
+      "expected_action": "cancel_timer",
+      "risk": "normal",
+      "utterances": {
+        "de": "Stoppe den laufenden Timer",
+        "en": "Stop the running timer",
+        "fr": "Arrête le minuteur en cours",
+        "es": "Detén el temporizador activo",
+        "it": "Ferma il timer in corso",
+        "nl": "Stop de lopende timer"
+      }
+    },
+    {
+      "scenario_id": "p16",
+      "split": "test",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Schalte licht im wohnzimmer an.",
+        "en": "Turn on the living room lights.",
+        "fr": "Allume la lumière du salon, maintenant.",
+        "es": "Enciende las luces de la sala.",
+        "it": "Accendi le luci del soggiorno.",
+        "nl": "Doe de woonkamerlampen aan."
+      }
+    },
+    {
+      "scenario_id": "p17",
+      "split": "test",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Das Balkonlicht soll aus sein",
+        "en": "The balcony light should be off",
+        "fr": "La lumière du balcon doit être éteinte",
+        "es": "La luz del balcón debe estar apagada",
+        "it": "La luce del balcone deve essere spenta",
+        "nl": "De balkonlamp moet uit zijn"
+      }
+    },
+    {
+      "scenario_id": "p18",
+      "split": "test",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Öffne bitte das Einfahrtstor, nicht die Haustür",
+        "en": "Open the driveway gate, not the front door",
+        "fr": "Ouvre le portail de l'allée, pas la porte d'entrée",
+        "es": "Abre la puerta de entrada de coches, no la puerta de casa",
+        "it": "Apri il cancello del vialetto, non la porta di casa",
+        "nl": "Open de opritpoort, niet de voordeur"
+      }
+    },
+    {
+      "scenario_id": "l06",
+      "split": "test",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Wenn du könntest, würdest du das Haustürschloss entriegeln?",
+        "en": "If you could, would you unlock the front door?",
+        "fr": "Si tu pouvais, déverrouillerais-tu la porte d'entrée ?",
+        "es": "Si pudieras, ¿abrirías la cerradura de la puerta?",
+        "it": "Se potessi, sbloccheresti la porta d'ingresso?",
+        "nl": "Als je kon, zou je de voordeur ontgrendelen?"
+      }
+    },
+    {
+      "scenario_id": "c06",
+      "split": "test",
+      "family": "covers",
+      "expected_action": "open_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Mach die Beschattung im Wintergarten auf",
+        "en": "Open the conservatory shade",
+        "fr": "Ouvre le store de la véranda",
+        "es": "Abre la persiana del invernadero",
+        "it": "Apri la tenda della veranda",
+        "nl": "Doe de zonwering van de serre open"
+      }
+    },
+    {
+      "scenario_id": "t06",
+      "split": "test",
+      "family": "timers",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Setze bloß keinen Timer für zehn Minuten",
+        "en": "Definitely don't set a timer for ten minutes",
+        "fr": "Ne mets surtout pas de minuteur de dix minutes",
+        "es": "Ni se te ocurra poner un temporizador de diez minutos",
+        "it": "Non impostare assolutamente un timer di dieci minuti",
+        "nl": "Zet beslist geen timer van tien minuten"
+      }
+    },
+    {
+      "scenario_id": "p19",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Bitte Kitchen-Licht an",
+        "en": "Turn on the Kitchen light",
+        "fr": "Allume la lumière Kitchen",
+        "es": "Enciende la luz de Kitchen",
+        "it": "Accendi la luce Kitchen",
+        "nl": "Doe de Kitchen-lamp aan"
+      }
+    },
+    {
+      "scenario_id": "p20",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Deaktiviere die Aquariumbeleuchtung",
+        "en": "Disable the aquarium lights",
+        "fr": "Désactive la lumière de l'aquarium",
+        "es": "Desactiva la iluminación del acuario",
+        "it": "Disattiva le luci dell'acquario",
+        "nl": "Schakel de aquariumverlichting uit"
+      }
+    },
+    {
+      "scenario_id": "p21",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Schalte das Haustürschloss an",
+        "en": "Switch on the front-door lock",
+        "fr": "Allume la serrure de la porte d'entrée",
+        "es": "Enciende la cerradura de la puerta principal",
+        "it": "Accendi la serratura della porta d'ingresso",
+        "nl": "Zet het voordeurslot aan"
+      }
+    },
+    {
+      "scenario_id": "p22",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Könntest du morgen das Licht einschalten?",
+        "en": "Could you turn on the lights tomorrow?",
+        "fr": "Pourrais-tu allumer la lumière demain ?",
+        "es": "¿Podrías encender la luz mañana?",
+        "it": "Potresti accendere le luci domani?",
+        "nl": "Kun je morgen het licht aandoen?"
+      }
+    },
+    {
+      "scenario_id": "p23",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Mach die Einfahrt an",
+        "en": "Turn on the driveway",
+        "fr": "Allume l'allée",
+        "es": "Enciende la entrada de coches",
+        "it": "Accendi il vialetto",
+        "nl": "Zet de oprit aan"
+      }
+    },
+    {
+      "scenario_id": "l07",
+      "split": "train",
+      "family": "locks",
+      "expected_action": "lock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Sperre die Hintertür ab",
+        "en": "Lock the back door",
+        "fr": "Ferme à clé la porte arrière",
+        "es": "Cierra con llave la puerta trasera",
+        "it": "Chiudi a chiave la porta sul retro",
+        "nl": "Doe de achterdeur op slot"
+      }
+    },
+    {
+      "scenario_id": "l08",
+      "split": "train",
+      "family": "locks",
+      "expected_action": "unlock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Mach das Fahrradkastenschloss auf",
+        "en": "Unlock the bicycle shed lock",
+        "fr": "Déverrouille la serrure du local à vélos",
+        "es": "Desbloquea el candado del cobertizo de bicicletas",
+        "it": "Sblocca il lucchetto della rimessa delle biciclette",
+        "nl": "Ontgrendel het slot van de fietsenberging"
+      }
+    },
+    {
+      "scenario_id": "l09",
+      "split": "train",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Mach die Schreibtischlampe an, nicht das Schloss",
+        "en": "Turn on the desk lamp, not the lock",
+        "fr": "Allume la lampe de bureau, pas la serrure",
+        "es": "Enciende la lámpara del escritorio, no la cerradura",
+        "it": "Accendi la lampada della scrivania, non la serratura",
+        "nl": "Doe de bureaulamp aan, niet het slot"
+      }
+    },
+    {
+      "scenario_id": "c07",
+      "split": "train",
+      "family": "covers",
+      "expected_action": "open_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Öffne die Rollläden im Erdgeschoss",
+        "en": "Open the ground-floor shutters",
+        "fr": "Ouvre les volets du rez-de-chaussée",
+        "es": "Abre las persianas de la planta baja",
+        "it": "Apri le tapparelle del piano terra",
+        "nl": "Open de rolluiken op de begane grond"
+      }
+    },
+    {
+      "scenario_id": "c08",
+      "split": "train",
+      "family": "covers",
+      "expected_action": "close_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Fahre die Jalousie im Gästezimmer runter",
+        "en": "Lower the guest-room blind",
+        "fr": "Baisse le store de la chambre d'amis",
+        "es": "Baja la persiana de la habitación de invitados",
+        "it": "Abbassa la veneziana della camera degli ospiti",
+        "nl": "Laat de jaloezie in de logeerkamer zakken"
+      }
+    },
+    {
+      "scenario_id": "t07",
+      "split": "train",
+      "family": "timers",
+      "expected_action": "start_timer",
+      "risk": "normal",
+      "utterances": {
+        "de": "Stelle einen Timer auf eine Minute",
+        "en": "Set a timer for one minute",
+        "fr": "Règle un minuteur sur une minute",
+        "es": "Pon un temporizador de un minuto",
+        "it": "Imposta un timer di un minuto",
+        "nl": "Zet een timer van één minuut"
+      }
+    },
+    {
+      "scenario_id": "t08",
+      "split": "train",
+      "family": "timers",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Lösche meinen Wecker für morgen",
+        "en": "Delete my alarm for tomorrow",
+        "fr": "Supprime mon réveil de demain",
+        "es": "Borra mi alarma para mañana",
+        "it": "Elimina la sveglia di domani",
+        "nl": "Verwijder mijn wekker voor morgen"
+      }
+    }
+  ]
+}
