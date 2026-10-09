@@ -340,6 +340,72 @@ class TrainerTests(unittest.TestCase):
                 self.invoke()
         execute.assert_not_called()
 
+    def test_evaluate_local_runs_offline_and_never_changes_approved(self) -> None:
+        self.save(mode="evaluate_local", confirm_resource_use=True)
+        self.work.mkdir()
+        for name in (
+            "needle3.safetensors", "needle_lora.safetensors",
+            "needle3.cact", "candidate-local-confidence.cact",
+            "confidence_head.npz", "train.jsonl",
+            "validation.jsonl", "test.jsonl",
+        ):
+            (self.work / name).write_bytes(b"input")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=3),
+            patch.object(runner, "run_command") as execute,
+        ):
+            def mock_execution(command, **kwargs):
+                if "/app/local_evaluate.py" in command:
+                    report = self.work / "evaluation" / "test-report.json"
+                    report.parent.mkdir()
+                    report.write_text('{"decision":{"verdict":"NO_GO"}}')
+            execute.side_effect = mock_execution
+            self.assertEqual(self.invoke(), 0)
+        self.assertEqual(execute.call_count, 2)
+        args = execute.call_args.args[0]
+        self.assertEqual(args[2], "/app/local_evaluate.py")
+        self.assertEqual(args[3], str(self.work))
+        env = execute.call_args.kwargs["env"]
+        self.assertEqual(env["HF_HUB_OFFLINE"], "1")
+        self.assertEqual(env["TRANSFORMERS_OFFLINE"], "1")
+        self.assertEqual(execute.call_args.kwargs["core"], 3)
+        self.assertEqual(execute.call_args.kwargs["max_ram_mib"], 4096)
+        self.assertFalse((self.work / "approved.cact").exists())
+        self.assertFalse((self.work / "approved.json").exists())
+
+    def test_evaluate_local_refuses_missing_export(self) -> None:
+        self.save(mode="evaluate_local", confirm_resource_use=True)
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"base")
+        (self.work / "needle_lora.safetensors").write_bytes(b"adapter")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=3),
+            patch.object(runner, "run_command") as execute,
+        ):
+            with self.assertRaisesRegex(FileNotFoundError,
+                                        "needle3.cact"):
+                self.invoke()
+        execute.assert_not_called()
+
+    def test_evaluate_local_requires_user_confirmation(self) -> None:
+        self.save(mode="evaluate_local", confirm_resource_use=False)
+        with patch.object(runner, "run_command") as execute:
+            with self.assertRaisesRegex(ValueError, "confirm_resource_use"):
+                self.invoke()
+        execute.assert_not_called()
+
+    def test_evaluate_local_rejects_memory_pressure(self) -> None:
+        self.save(mode="evaluate_local", confirm_resource_use=True)
+        with (
+            patch.object(runner, "available_ram_mib", return_value=5000),
+            patch.object(runner, "run_command") as execute,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Refusing evaluate_local"):
+                self.invoke()
+        execute.assert_not_called()
+
     def test_calibrated_export_is_local_and_not_auto_approved(self) -> None:
         self.save(mode="export_local", confirm_resource_use=True)
         self.work.mkdir()
