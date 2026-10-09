@@ -81,3 +81,10 @@ jobs:
               assert restored["proj"]["kernel"].shape == (2, 1)
           print("CPU-only JAX + atomic confidence-head checkpoint OK")
           '
+      - name: Compile and differentiate real tiny Needle engram confidence head
+        run: |
+          docker run --rm \
+            --env JAX_PLATFORMS=cpu \
+            -v "$PWD/addon-needle-trainer/tests:/work/tests:ro" \
+            --entrypoint python3 local/needle-trainer:ci \
+            /work/tests/smoke_confidence_grad.py
