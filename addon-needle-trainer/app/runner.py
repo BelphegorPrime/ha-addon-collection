@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import json
 import os
-import resource
 import subprocess
 import sys
 from pathlib import Path
 
+from resource_guard import run_bounded
 from training.workflow import LANGUAGES, SPLITS, load_scenarios, prepared_rows, write_jsonl
 
 OPTIONS = Path("/data/options.json")
@@ -43,25 +43,20 @@ def available_ram_mib() -> int:
     raise RuntimeError("Cannot determine available host memory; refusing to train")
 
 
-def apply_limits(max_ram_mib: int, core: int) -> None:
-    """Run in subprocess; bound address space and use one low-priority CPU."""
-    # RLIMIT_AS is not a cgroup RAM limit; it is deliberately conservative
-    # and may reject JAX's large virtual mappings before physical RAM fills.
-    limit = max_ram_mib * MIB
-    resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
-    os.sched_setaffinity(0, {core})
-    os.nice(19)
-
-
 def run_command(
     command: list[str], *,
     env: dict[str, str],
     max_ram_mib: int,
+    reserve_memory_mib: int,
     core: int,
 ) -> None:
-    subprocess.run(
-        command, check=True, env=env,
-        preexec_fn=lambda: apply_limits(max_ram_mib, core),
+    """Monitor actual RAM instead of limiting JAX's virtual address space."""
+    run_bounded(
+        command,
+        env=env,
+        max_ram_mib=max_ram_mib,
+        reserve_memory_mib=reserve_memory_mib,
+        core=core,
     )
 
 
@@ -228,8 +223,10 @@ def run(
                 "--out", str(work / "needle_lora.safetensors"),
             ]
     print(
-        f"Starting one-shot {mode}: CPU #{core}, low priority; virtual address "
-        f"limit {ram} MiB; {reserve} MiB host reserve (not a cgroup limit).",
+        f"Starting one-shot {mode}: CPU #{core}, low priority; physical "
+        f"RSS watchdog budget {ram} MiB; {reserve} MiB free-host-RAM reserve. "
+        "No RLIMIT_AS (JAX requires a larger virtual address space). "
+        "Watchdog sampling is best-effort, not a hard cgroup quota.",
         flush=True,
     )
     if mode in ("train", "calibrate"):
@@ -241,7 +238,8 @@ def run(
                 sys.executable, "-u", "/app/tokenizer_assets.py",
                 "install", str(work),
             ],
-            env=env, max_ram_mib=ram, core=core,
+            env=env, max_ram_mib=ram,
+            reserve_memory_mib=reserve, core=core,
         )
     run_command(cmd, env=env, max_ram_mib=ram, core=core)
     if mode in ("download", "download_base", "download_tokenizer"):
