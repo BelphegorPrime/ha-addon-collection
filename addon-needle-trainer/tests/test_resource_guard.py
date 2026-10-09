@@ -55,7 +55,8 @@ class ResourceGuardTests(unittest.TestCase):
     def test_successful_command_uses_new_session_and_monitors_memory(self) -> None:
         process = Mock()
         process.pid = 5678
-        process.poll.return_value = None
+        # Native Popen.poll() returns the exit status after wait() finishes.
+        process.poll.side_effect = [None, 0]
         process.wait.return_value = 0
         process.returncode = 0
         with (
