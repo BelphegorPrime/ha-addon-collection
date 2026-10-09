@@ -92,8 +92,8 @@ def run(
 ) -> int:
     opts = options_from(options_path)
     mode = opts.get("mode", "idle")
-    if mode not in ("idle", "prepare", "download", "train"):
-        raise ValueError("mode must be idle, prepare, download or train")
+    if mode not in ("idle", "prepare", "download", "train", "build"):
+        raise ValueError("mode must be idle, prepare, download, train or build")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -106,6 +106,11 @@ def run(
     reserve = integer(opts, "reserve_memory_mib", 1024, 16384)
     cpu_core = integer(opts, "cpu_core", -1, 4095)
     epochs = integer(opts, "epochs", 1, 3)
+    if mode == "build" and opts.get("confirm_uncalibrated_export") is not True:
+        raise ValueError(
+            "Build requires confirm_uncalibrated_export=true because the "
+            "resulting model has no calibrated confidence head."
+        )
     work.mkdir(parents=True, exist_ok=True)
 
     if mode == "prepare":
@@ -141,35 +146,51 @@ def run(
     checkpoint = work / "needle3.safetensors"
 
     if mode == "download":
-        # Only this explicit mode is allowed to download from the internet.
+        # Explicit mode downloads the upstream trainable safetensors checkpoint.
         cmd = ["needle", "download", "needle3.safetensors", "--out", str(work)]
     else:
-        env["HF_HUB_OFFLINE"] = "1"
-        env["TRANSFORMERS_OFFLINE"] = "1"
         if not checkpoint.is_file():
             raise FileNotFoundError(
                 f"Missing {checkpoint}; run mode=download first."
             )
-        train = work / "train.jsonl"
-        if not train.is_file():
-            raise FileNotFoundError(
-                f"Missing {train}; run mode=prepare first."
-            )
-        cmd = [
-            "needle", "finetune", str(train),
-            "--checkpoint", str(checkpoint),
-            "--epochs", str(epochs),
-            "--batch-size", "1",
-            "--max-len", "384",
-            "--lora-rank", "4",
-            "--lora-alpha", "8",
-            "--generate", "0",
-            "--workers", "1",
-            "--val-split", "0",
-            "--seed", "42",
-            "--checkpoint-dir", str(work / "checkpoints"),
-            "--out", str(work / "needle_lora.safetensors"),
-        ]
+        if mode == "build":
+            # Upstream Needle build *always* downloads the original archive
+            # with fetch_weights(force=True), even with a local checkpoint.
+            # The built LoRA model drops its confidence head and is NEVER
+            # named approved.cact or eligible for automatic deployment.
+            adapter = work / "needle_lora.safetensors"
+            if not adapter.is_file():
+                raise FileNotFoundError(
+                    f"Missing {adapter}; run mode=train first."
+                )
+            cmd = [
+                "needle", "build", str(checkpoint),
+                "--lora", str(adapter),
+                "--out", str(work / "experimental-uncalibrated.cact"),
+            ]
+        else:
+            env["HF_HUB_OFFLINE"] = "1"
+            env["TRANSFORMERS_OFFLINE"] = "1"
+            train = work / "train.jsonl"
+            if not train.is_file():
+                raise FileNotFoundError(
+                    f"Missing {train}; run mode=prepare first."
+                )
+            cmd = [
+                "needle", "finetune", str(train),
+                "--checkpoint", str(checkpoint),
+                "--epochs", str(epochs),
+                "--batch-size", "1",
+                "--max-len", "384",
+                "--lora-rank", "4",
+                "--lora-alpha", "8",
+                "--generate", "0",
+                "--workers", "1",
+                "--val-split", "0",
+                "--seed", "42",
+                "--checkpoint-dir", str(work / "checkpoints"),
+                "--out", str(work / "needle_lora.safetensors"),
+            ]
     print(
         f"Starting one-shot {mode}: CPU #{core}, low priority; virtual address "
         f"limit {ram} MiB; {reserve} MiB host reserve (not a cgroup limit).",
@@ -183,6 +204,15 @@ def run(
             checkpoint.symlink_to(nested.relative_to(work))
         if not checkpoint.is_file():
             raise RuntimeError("Download returned without a checkpoint. Check logs.")
+    elif mode == "build":
+        if not (work / "experimental-uncalibrated.cact").is_file():
+            raise RuntimeError("Build succeeded without producing a .cact archive")
+        print(
+            "Experimental uncalibrated .cact built under /share/needle-training. "
+            "It will NOT be selected by the live Needle add-on because local "
+            "LoRA exports drop the confidence head.",
+            flush=True,
+        )
     else:
         print(
             "LoRA adapter saved. NOT usable for automatic HA approval: "
