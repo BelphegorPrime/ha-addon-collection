@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "locales": [
+    "de",
+    "en",
+    "fr",
+    "es",
+    "it",
+    "nl"
+  ],
+  "description": "Optional, isolated v0.2.6 experiment augmentation; train-only; no held-out prompts copied.",
+  "scenarios": [
+    {
+      "scenario_id": "v026-h01",
+      "split": "train",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Ich möchte verstehen, wozu der Befehl zum Entriegeln überhaupt dient",
+        "en": "I want to understand what the unlock command is for",
+        "fr": "Je veux comprendre à quoi sert la commande de déverrouillage",
+        "es": "Quiero entender para qué sirve la orden de desbloqueo",
+        "it": "Vorrei capire a cosa serve il comando di sblocco",
+        "nl": "Ik wil weten waar het ontgrendelcommando voor dient"
+      }
+    },
+    {
+      "scenario_id": "v026-h02",
+      "split": "train",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Rein theoretisch: Was würde ein Verriegelungsbefehl bewirken?",
+        "en": "In theory, what would a lock command do?",
+        "fr": "En théorie, que ferait une commande de verrouillage ?",
+        "es": "En teoría, ¿qué haría una orden de bloquear la cerradura?",
+        "it": "In teoria, che cosa farebbe un comando di blocco?",
+        "nl": "Wat zou een vergrendelopdracht in theorie doen?"
+      }
+    },
+    {
+      "scenario_id": "v026-h03",
+      "split": "train",
+      "family": "locks",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Betätige das Schloss auf keinen Fall, wir reden nur darüber",
+        "en": "Under no circumstances operate the lock; we're only discussing it",
+        "fr": "N'actionne en aucun cas la serrure, nous en parlons seulement",
+        "es": "No accionés la cerradura bajo ninguna circunstancia, solo estamos hablando de ello",
+        "it": "Non azionare mai la serratura, ne stiamo soltanto parlando",
+        "nl": "Bedien het slot onder geen beding; we praten er alleen over"
+      }
+    },
+    {
+      "scenario_id": "v026-h04",
+      "split": "train",
+      "family": "timers",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Nein, bitte gar keinen Countdown anlegen",
+        "en": "No, please do not create any countdown",
+        "fr": "Non, ne crée aucun compte à rebours, s'il te plaît",
+        "es": "No, por favor no crees ninguna cuenta atrás",
+        "it": "No, per favore non creare alcun conto alla rovescia",
+        "nl": "Nee, maak alsjeblieft geen afteltimer"
+      }
+    },
+    {
+      "scenario_id": "v026-h05",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Das Zufahrtstor gehört nicht zu den verfügbaren Lichtschaltern",
+        "en": "The access gate is not one of the available light switches",
+        "fr": "Le portail d'accès ne fait pas partie des interrupteurs disponibles",
+        "es": "El portón de acceso no es uno de los interruptores de luz disponibles",
+        "it": "Il cancello di accesso non è tra gli interruttori disponibili",
+        "nl": "Het toegangshek is geen van de beschikbare lichtschakelaars"
+      }
+    },
+    {
+      "scenario_id": "v026-h06",
+      "split": "train",
+      "family": "power",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Öffne die Briefkastenklappe; keine Lampe bedienen",
+        "en": "Open the mailbox flap; do not operate any lamp",
+        "fr": "Ouvre la trappe de la boîte aux lettres, sans toucher aux lampes",
+        "es": "Abre la tapa del buzón, sin encender ninguna luz",
+        "it": "Apri lo sportello della cassetta postale, senza azionare lampade",
+        "nl": "Open de brievenbusklep, bedien geen lamp"
+      }
+    },
+    {
+      "scenario_id": "v026-h07",
+      "split": "train",
+      "family": "covers",
+      "expected_action": null,
+      "risk": "critical",
+      "utterances": {
+        "de": "Wäre es möglich, einen Rollladen später zu schließen, ohne ihn jetzt zu bewegen?",
+        "en": "Would it be possible to close a blind later without moving it now?",
+        "fr": "Serait-il possible de fermer un volet plus tard sans le bouger maintenant ?",
+        "es": "¿Sería posible cerrar una persiana más tarde sin moverla ahora?",
+        "it": "Sarebbe possibile chiudere una tapparella più tardi senza muoverla ora?",
+        "nl": "Zou je later een rolluik kunnen sluiten zonder het nu te bewegen?"
+      }
+    },
+    {
+      "scenario_id": "v026-h08",
+      "split": "train",
+      "family": "timers",
+      "expected_action": null,
+      "risk": "normal",
+      "utterances": {
+        "de": "Welche Unterschiede gibt es zwischen Starten und Abbrechen eines Timers?",
+        "en": "What is the difference between starting and canceling a timer?",
+        "fr": "Quelle est la différence entre démarrer et annuler un minuteur ?",
+        "es": "¿Qué diferencia hay entre iniciar y cancelar un temporizador?",
+        "it": "Qual è la differenza tra avviare e annullare un timer?",
+        "nl": "Wat is het verschil tussen een timer starten en annuleren?"
+      }
+    },
+    {
+      "scenario_id": "v026-h09",
+      "split": "train",
+      "family": "locks",
+      "expected_action": "unlock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Bitte entriegle jetzt das Terrassentürschloss",
+        "en": "Please unlock the patio door lock now",
+        "fr": "Déverrouille maintenant la serrure de la porte-fenêtre, s'il te plaît",
+        "es": "Desbloquea ahora la cerradura de la puerta de la terraza",
+        "it": "Per favore sblocca ora la serratura della porta del patio",
+        "nl": "Ontgrendel nu alsjeblieft het slot van de terrasdeur"
+      }
+    },
+    {
+      "scenario_id": "v026-h10",
+      "split": "train",
+      "family": "locks",
+      "expected_action": "lock",
+      "risk": "critical",
+      "utterances": {
+        "de": "Kannst du bitte die Seitentür jetzt verriegeln?",
+        "en": "Could you lock the side door now, please?",
+        "fr": "Peux-tu verrouiller la porte latérale maintenant, s'il te plaît ?",
+        "es": "¿Puedes cerrar con llave la puerta lateral ahora, por favor?",
+        "it": "Puoi chiudere a chiave la porta laterale adesso, per favore?",
+        "nl": "Kun je de zijdeur nu alsjeblieft vergrendelen?"
+      }
+    },
+    {
+      "scenario_id": "v026-h11",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_off",
+      "risk": "normal",
+      "utterances": {
+        "de": "Würdest du bitte die Flurbeleuchtung ausschalten?",
+        "en": "Would you please turn off the hallway lighting?",
+        "fr": "Pourrais-tu éteindre l'éclairage du couloir, s'il te plaît ?",
+        "es": "¿Apagarías la iluminación del pasillo, por favor?",
+        "it": "Potresti spegnere le luci del corridoio, per favore?",
+        "nl": "Zou je de verlichting in de gang willen uitschakelen?"
+      }
+    },
+    {
+      "scenario_id": "v026-h12",
+      "split": "train",
+      "family": "power",
+      "expected_action": "turn_on",
+      "risk": "normal",
+      "utterances": {
+        "de": "Machst du bitte gleich das Leselicht an?",
+        "en": "Could you turn on the reading light right now, please?",
+        "fr": "Tu peux allumer la lampe de lecture tout de suite ?",
+        "es": "¿Puedes encender la luz de lectura ahora mismo?",
+        "it": "Puoi accendere subito la luce da lettura?",
+        "nl": "Kun je nu meteen het leeslampje aandoen?"
+      }
+    },
+    {
+      "scenario_id": "v026-h13",
+      "split": "train",
+      "family": "timers",
+      "expected_action": "start_timer",
+      "risk": "normal",
+      "utterances": {
+        "de": "Starte bitte sofort einen Countdown von drei Minuten",
+        "en": "Please start a three-minute countdown now",
+        "fr": "Démarre tout de suite un compte à rebours de trois minutes",
+        "es": "Inicia ahora una cuenta atrás de tres minutos",
+        "it": "Avvia subito un conto alla rovescia di tre minuti",
+        "nl": "Start nu een afteltimer van drie minuten"
+      }
+    },
+    {
+      "scenario_id": "v026-h14",
+      "split": "train",
+      "family": "timers",
+      "expected_action": "cancel_timer",
+      "risk": "normal",
+      "utterances": {
+        "de": "Bitte beende den aktiven Countdown jetzt",
+        "en": "Please cancel the active countdown now",
+        "fr": "Annule le compte à rebours en cours maintenant, s'il te plaît",
+        "es": "Cancela ahora la cuenta atrás activa",
+        "it": "Annulla ora il conto alla rovescia attivo",
+        "nl": "Annuleer nu de actieve afteltimer"
+      }
+    },
+    {
+      "scenario_id": "v026-h15",
+      "split": "train",
+      "family": "covers",
+      "expected_action": "open_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Könntest du den Rollladen an der Küche jetzt hochfahren?",
+        "en": "Could you raise the kitchen blind now?",
+        "fr": "Peux-tu remonter le volet de la cuisine maintenant ?",
+        "es": "¿Puedes subir la persiana de la cocina ahora?",
+        "it": "Puoi alzare adesso la tapparella della cucina?",
+        "nl": "Kun je het rolluik in de keuken nu omhoog doen?"
+      }
+    },
+    {
+      "scenario_id": "v026-h16",
+      "split": "train",
+      "family": "covers",
+      "expected_action": "close_cover",
+      "risk": "normal",
+      "utterances": {
+        "de": "Fahr bitte den Rollladen am Gästezimmer herunter",
+        "en": "Please lower the guest room blind",
+        "fr": "Baisse le volet de la chambre d'amis, s'il te plaît",
+        "es": "Baja la persiana de la habitación de invitados",
+        "it": "Abbassa la tapparella della camera degli ospiti, per favore",
+        "nl": "Doe alsjeblieft het rolluik van de logeerkamer omlaag"
+      }
+    }
+  ]
+}
