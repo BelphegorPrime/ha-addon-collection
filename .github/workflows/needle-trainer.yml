@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - 'feat/**'
+      - 'fix/**'
     paths:
       - 'addon-needle-trainer/**'
       - 'addon-needle/**'
