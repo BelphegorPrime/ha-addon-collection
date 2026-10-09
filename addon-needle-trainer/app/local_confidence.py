@@ -107,6 +107,43 @@ def load_progress(progress: Path, fingerprint: str) -> tuple[dict, int, int]:
         )
 
 
+def prepare_jax_backbone(base: dict) -> dict:
+    """Convert *all* Needle checkpoint NumPy tensors to JAX arrays.
+
+    Flax engram embedding tables use traced gather indices. NumPy array
+    indexing with tracers is not supported, even when the LoRA targets
+    themselves have already been converted to JAX.
+    """
+    import jax
+    import jax.numpy as jnp
+
+    return jax.tree.map(jnp.asarray, base)
+
+
+def make_confidence_grad_fn(model):
+    """Return the actual calibration objective with dynamic frozen weights.
+
+    The large 20-layer backbone must be a JIT argument, not a Python
+    closure constant: otherwise XLA can constant-fold hundreds of MiB
+    of weights into the compiled executable.
+    """
+    import jax
+    import jax.numpy as jnp
+    import optax
+
+    def loss_fn(head_params, backbone_params, tokens, label):
+        current_params = {**backbone_params, "confidence_head": head_params}
+        logits = model.apply(
+            {"params": current_params}, tokens,
+            method=type(model).forward_confidence,
+        )
+        return optax.sigmoid_binary_cross_entropy(
+            logits.astype(jnp.float32), label
+        ).mean()
+
+    return jax.jit(jax.value_and_grad(loss_fn, argnums=0))
+
+
 def load_local_model(checkpoint: Path, adapter: Path):
     """Reuse exactly upstream Needle's local LoRA merge (no downloads)."""
     from needle.model.checkpoints import read_adapter
@@ -126,7 +163,7 @@ def load_local_model(checkpoint: Path, adapter: Path):
     # indexes those embeddings with JAX traced indices in hidden_cells,
     # causing TracerArrayConversionError during confidence backprop.
     # Convert the *entire* backbone before tracing, not just LoRA targets.
-    base = jax.tree.map(jnp.asarray, base)
+    base = prepare_jax_backbone(base)
 
     lora = {
         tuple(path.split("/")): {
@@ -246,22 +283,9 @@ def run_calibration(
     )
     state = optimizer.init(head)
 
-    def loss_fn(head_params, backbone_params, tokens, label):
-        # Pass backbone weights as JIT *arguments*, not closure constants:
-        # the 20-layer base checkpoint is far too large to embed into
-        # compiled XLA literals, which also raises compile-time RAM usage.
-        current_params = {**backbone_params, "confidence_head": head_params}
-        logits = model.apply(
-            {"params": current_params}, tokens,
-            method=SimpleAttentionNetwork.forward_confidence,
-        )
-        return optax.sigmoid_binary_cross_entropy(
-            logits.astype(jnp.float32), label
-        ).mean()
-
-    # One compilation per invocation. Only one logical CPU is allocated by
-    # the parent add-on; JAX threads are limited in the subprocess env.
-    grad_fn = jax.jit(jax.value_and_grad(loss_fn, argnums=0))
+    # One compilation per invocation. The backbone is a dynamic JIT
+    # argument and is frozen: only head_params receive gradients.
+    grad_fn = make_confidence_grad_fn(model)
     losses: list[float] = []
     maximum = max_epochs * len(sequences)
     end = min(step + steps_per_run, maximum)
