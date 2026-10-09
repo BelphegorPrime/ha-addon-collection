@@ -10,9 +10,15 @@ This is a separate, optional add-on in the **same repository** to keep
 training isolated and manually controlled. No automated retraining,
 model replacement or HA service execution occurs.
 
-Read [DOCS.md](DOCS.md) before use. Start with **prepare**, then
-**download**, then **train** (each requires a manual start and confirmation).
-Training is best-effort on weak hosts and might fail due to lack of RAM.
+Read [DOCS.md](DOCS.md) before use. Full local workflow:
+**prepare → download → download_base → train → calibrate (repeat in
+small batches) → export_local**. All steps run in the isolated trainer
+container and require manual confirmation; only the two downloads use
+the internet. The default slice trains eight confidence-head examples
+per start and resumes from an atomic checkpoint. Weak hosts may still
+run out of RAM.
 
-**A local Needle 3 LoRA export lacks calibrated confidence** and cannot be
-deployed for automatic HA actions under Needle LLM's 0.8 confidence gate.
+The resulting `candidate-local-confidence.cact` includes the locally
+trained post-hoc head, but its calibration and safety are **not proven**.
+No model is auto-promoted; a held-out, six-language benchmark and
+independent review are required before setting up `approved.cact`.
