@@ -1,6 +1,6 @@
 name: "Needle"
 description: "Run the Cactus Compute Needle local tool-calling playground"
-version: "3.1.3-5"
+version: "3.1.3-6"
 slug: "addon_needle"
 url: "https://github.com/BelphegorPrime/ha-addon-collection/tree/master/addon-needle"
 arch:
@@ -24,5 +24,7 @@ map:
     read_only: false
 options:
   weights: ""
+  auto_trained_weights: true
 schema:
   weights: str
+  auto_trained_weights: bool
