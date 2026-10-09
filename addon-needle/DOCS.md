@@ -1056,6 +1056,9 @@ production inference service. Its one-shot modes prepare the curated data,
 download the public training checkpoint on request and run CPU-only LoRA
 training under low scheduling priority and conservative resource checks.
 
-The trainer never substitutes a model in this add-on. A locally trained
-Needle LoRA model has no calibrated confidence head and therefore is **not**
-suitable for automatic HA device control with the unchanged 0.8 threshold.
+The trainer never substitutes a model in this add-on. Its **plain LoRA
+export** still lacks a calibrated confidence head. The optional new
+`calibrate`/`export_local` sequence trains a head entirely offline on this
+host and exports a separate candidate model. That candidate is **not**
+automatically approved: held-out safety and confidence testing is still
+required before the normal add-on will discover it.
