@@ -185,5 +185,65 @@ class TrainerTests(unittest.TestCase):
         self.assertFalse((self.work / "approved.cact").exists())
 
 
+    def test_local_confidence_calibration_is_bounded_and_offline(self) -> None:
+        self.save(
+            mode="calibrate",
+            confirm_resource_use=True,
+            calibration_steps_per_run=8,
+            calibration_epochs=2,
+        )
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        (self.work / "needle_lora.safetensors").write_bytes(b"adapter")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=2),
+            patch.object(runner, "run_command") as execute,
+        ):
+            self.assertEqual(self.invoke(), 0)
+        cmd = execute.call_args.args[0]
+        self.assertEqual(cmd[2:4], [
+            "/app/local_confidence.py", "calibrate",
+        ])
+        self.assertEqual(cmd[cmd.index("--steps") + 1], "8")
+        self.assertEqual(cmd[cmd.index("--epochs") + 1], "2")
+        env = execute.call_args.kwargs["env"]
+        self.assertEqual(env["HF_HUB_OFFLINE"], "1")
+        self.assertEqual(execute.call_args.kwargs["core"], 2)
+
+    def test_calibrated_export_is_local_and_not_auto_approved(self) -> None:
+        self.save(mode="export_local", confirm_resource_use=True)
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"checkpoint")
+        (self.work / "needle_lora.safetensors").write_bytes(b"adapter")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=20000),
+            patch.object(runner, "choose_cpu", return_value=0),
+            patch.object(runner, "run_command") as execute,
+        ):
+            def fake_export(*args, **kwargs):
+                (self.work / "candidate-local-confidence.cact").write_bytes(
+                    b"candidate"
+                )
+            execute.side_effect = fake_export
+            self.assertEqual(self.invoke(), 0)
+        cmd = execute.call_args.args[0]
+        self.assertEqual(cmd[3], "export")
+        self.assertEqual(
+            execute.call_args.kwargs["env"]["HF_HUB_OFFLINE"], "1"
+        )
+        self.assertFalse((self.work / "approved.cact").exists())
+
+    def test_invalid_calibration_steps_do_not_launch(self) -> None:
+        self.save(
+            mode="calibrate", confirm_resource_use=True,
+            calibration_steps_per_run=1000,
+        )
+        with patch.object(runner, "run_command") as execute:
+            with self.assertRaisesRegex(ValueError, "calibration_steps_per_run"):
+                self.invoke()
+        execute.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
