@@ -966,3 +966,18 @@ update the bundled playground files.
 The `.cact` format is tied to the Needle engine version. Rebuild or export the
 weights with the package version used by this add-on if Needle reports an
 incompatible model.
+
+## Optional on-device multilingual training
+
+Want to run the Needle LLM multilingual training experiments on the
+**same Home Assistant OS host** without interrupting the Needle playground?
+Install the separate, **manual-only**
+[Needle Trainer (Experimental)](../addon-needle-trainer) from this add-on
+collection. It uses a different container so JAX is not installed in the
+production inference service. Its one-shot modes prepare the curated data,
+download the public training checkpoint on request and run CPU-only LoRA
+training under low scheduling priority and conservative resource checks.
+
+The trainer never substitutes a model in this add-on. A locally trained
+Needle LoRA model has no calibrated confidence head and therefore is **not**
+suitable for automatic HA device control with the unchanged 0.8 threshold.
