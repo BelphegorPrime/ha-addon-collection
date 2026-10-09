@@ -167,7 +167,7 @@ def run_calibration(
     import jax.numpy as jnp
     import optax
     from needle.model.architecture import SimpleAttentionNetwork
-    from needle.model.finetune import read_examples
+    from needle.model.finetune import read_examples, render_example
     from needle.model.tokenizer import get_tokenizer
     from needle.model.quantize import configure_deploy
 
@@ -190,8 +190,29 @@ def run_calibration(
     if not rows:
         raise ValueError("Empty training data")
     examples = candidate_examples(rows)
-    sequences = [(_encoded(tokenizer, row, max_len), label)
-                 for row, label in examples]
+    # Reduce JAX memory and CPU use: compile only the smallest sequence
+    # bucket that fits every *complete* prompt+call. Never truncate.
+    longest = max(
+        len(tokenizer.encode("".join(render_example(example)))) + 1
+        for example, _ in examples
+    )
+    if longest > max_len:
+        raise ValueError(
+            f"Longest completed training call is {longest} tokens "
+            f"(limit {max_len}); refusing truncation"
+        )
+    bucket = 128
+    while bucket < longest:
+        bucket *= 2
+    bucket = min(bucket, max_len)
+    print(
+        f"Confidence calibration: {len(examples)} labeled completions, "
+        f"max {longest} tokens, padded to {bucket}", flush=True,
+    )
+    sequences = [
+        (_encoded(tokenizer, example, bucket), label)
+        for example, label in examples
+    ]
     progress = work / "confidence_head.npz"
     if progress.exists():
         stored_head, step, total_steps = load_progress(progress, fingerprint)
