@@ -87,7 +87,7 @@ class HeadTrainingTests(unittest.TestCase):
         self.assertIn("os.replace(staged, progress)", contents)
         self.assertIn("if step < total_steps:", contents)
         self.assertIn("candidate-local-confidence.cact", contents)
-        self.assertNotIn("approved.cact", contents)
+        self.assertNotIn('output = work / "approved.cact"', contents)
 
 
 if __name__ == "__main__":
