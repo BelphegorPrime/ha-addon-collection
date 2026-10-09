@@ -93,10 +93,10 @@ def run(
     opts = options_from(options_path)
     mode = opts.get("mode", "idle")
     if mode not in (
-        "idle", "prepare", "download", "download_base",
-        "train", "calibrate", "export_local", "build",
+        "idle", "prepare", "download", "download_tokenizer",
+        "download_base", "train", "calibrate", "export_local", "build",
     ):
-        raise ValueError("mode must be idle, prepare, download, download_base, train, calibrate, export_local or build")
+        raise ValueError("mode must be idle, prepare, download, download_tokenizer, download_base, train, calibrate, export_local or build")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -150,10 +150,20 @@ def run(
     })
     checkpoint = work / "needle3.safetensors"
 
-    if mode in ("download", "download_base"):
-        # These two explicit modes alone download published Needle artifacts.
-        target = "needle3.safetensors" if mode == "download" else "needle3"
-        cmd = ["needle", "download", target, "--out", str(work)]
+    tokenizer_command = [
+        sys.executable, "-u", "/app/tokenizer_assets.py", "download",
+        str(work),
+    ]
+    if mode == "download_tokenizer":
+        cmd = tokenizer_command
+    elif mode in ("download", "download_base"):
+        # Explicit download only; reuse cached checkpoint on subsequent
+        # invocations so a missing tokenizer does not redownload 242 MB.
+        if mode == "download" and checkpoint.is_file():
+            cmd = tokenizer_command
+        else:
+            target = "needle3.safetensors" if mode == "download" else "needle3"
+            cmd = ["needle", "download", target, "--out", str(work)]
     else:
         if not checkpoint.is_file():
             raise FileNotFoundError(
@@ -222,17 +232,45 @@ def run(
         f"limit {ram} MiB; {reserve} MiB host reserve (not a cgroup limit).",
         flush=True,
     )
+    if mode in ("train", "calibrate"):
+        # Upstream Needle loads tokenizer.model only from its installed
+        # package directory. Restore it from persistent /share *before*
+        # the expensive JAX startup, with network access still disabled.
+        run_command(
+            [
+                sys.executable, "-u", "/app/tokenizer_assets.py",
+                "install", str(work),
+            ],
+            env=env, max_ram_mib=ram, core=core,
+        )
     run_command(cmd, env=env, max_ram_mib=ram, core=core)
-    if mode in ("download", "download_base"):
-        target = "needle3.safetensors" if mode == "download" else "needle3.cact"
-        expected = work / target
-        nested = work / "checkpoints" / target
-        if not expected.is_file() and nested.is_file():
-            expected.symlink_to(nested.relative_to(work))
-        if not expected.is_file():
-            raise RuntimeError(
-                f"Download returned without {target}. Check logs."
+    if mode in ("download", "download_base", "download_tokenizer"):
+        if mode in ("download", "download_base"):
+            target = (
+                "needle3.safetensors"
+                if mode == "download" else "needle3.cact"
             )
+            expected = work / target
+            nested = work / "checkpoints" / target
+            if not expected.is_file() and nested.is_file():
+                expected.symlink_to(nested.relative_to(work))
+            if not expected.is_file():
+                raise RuntimeError(
+                    f"Download returned without {target}. Check logs."
+                )
+        if mode == "download":
+            # The checkpoint download does not include the tokenizer.
+            # The add-on's offline train mode must never implicitly
+            # fetch these assets from Hugging Face.
+            if cmd != tokenizer_command:
+                run_command(
+                    tokenizer_command, env=env,
+                    max_ram_mib=ram, core=core,
+                )
+        if mode in ("download", "download_tokenizer"):
+            from tokenizer_assets import verify_assets
+
+            verify_assets(work)
     elif mode == "calibrate":
         print(
             "Confidence training slice saved; run calibrate again to "
