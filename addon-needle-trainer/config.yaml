@@ -1,6 +1,6 @@
 name: "Needle Trainer (Experimental)"
 description: "Manual, low-priority CPU-only Needle LoRA experiments on your HA host"
-version: "0.2.4"
+version: "0.2.5"
 slug: "addon_needle_trainer"
 url: "https://github.com/BelphegorPrime/ha-addon-collection/tree/master/addon-needle-trainer"
 arch:
@@ -23,7 +23,7 @@ options:
   calibration_steps_per_run: 8
   calibration_epochs: 2
 schema:
-  mode: "list(idle|prepare|download|download_tokenizer|download_base|train|calibrate|calibrate_all|export_local|build)"
+  mode: "list(idle|prepare|download|download_tokenizer|download_base|train|calibrate|calibrate_all|export_local|evaluate_local|build)"
   confirm_resource_use: bool
   confirm_uncalibrated_export: bool
   memory_limit_mib: int
