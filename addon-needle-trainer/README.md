@@ -40,3 +40,11 @@ Home Assistant. It terminates the training subprocess group if either
 budget is crossed. The monitor is best effort, **not a kernel-enforced
 cgroup limit**; available memory and strict RSS guarantees depend on the
 host OS and may still require a separate Linux container or host.
+
+
+**v0.2.3 confidence calibration fix:** The local `calibrate` mode now
+converts every NumPy-loaded Needle checkpoint tensor to JAX arrays before
+differentiation, including Engram embedding tables. It also supplies the
+frozen transformer as a dynamic JIT input, preventing huge XLA compiled
+constants. CI now performs an actual tiny Needle Engram and confidence-head
+forward/backward pass using the pinned JAX image.
