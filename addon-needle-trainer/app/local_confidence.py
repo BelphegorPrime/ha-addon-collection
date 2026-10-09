@@ -117,7 +117,16 @@ def load_local_model(checkpoint: Path, adapter: Path):
     tuned = read_adapter(str(adapter))
     if not tuned or not tuned.get("lora"):
         raise ValueError("Missing or malformed Needle LoRA adapter")
+    import jax
     import jax.numpy as jnp
+
+    # Upstream read_checkpoint() loads every weight as a NumPy ndarray.
+    # merge_lora() only touches the five LoRA target groups, leaving
+    # other NumPy leaves (notably engrams[].embedding) unchanged. Flax
+    # indexes those embeddings with JAX traced indices in hidden_cells,
+    # causing TracerArrayConversionError during confidence backprop.
+    # Convert the *entire* backbone before tracing, not just LoRA targets.
+    base = jax.tree.map(jnp.asarray, base)
 
     lora = {
         tuple(path.split("/")): {
@@ -229,15 +238,19 @@ def run_calibration(
     model = SimpleAttentionNetwork(config)
     # The upstream head method uses stop_gradient on hidden cells, keeping
     # the backbone frozen. Trainable pytree consists exclusively of head.
-    frozen = {**params, "confidence_head": None}
+    frozen = {key: value for key, value in params.items()
+              if key != "confidence_head"}
     optimizer = optax.chain(
         optax.clip_by_global_norm(1.0),
         optax.sgd(learning_rate=learning_rate),
     )
     state = optimizer.init(head)
 
-    def loss_fn(head_params, tokens, label):
-        current_params = {**frozen, "confidence_head": head_params}
+    def loss_fn(head_params, backbone_params, tokens, label):
+        # Pass backbone weights as JIT *arguments*, not closure constants:
+        # the 20-layer base checkpoint is far too large to embed into
+        # compiled XLA literals, which also raises compile-time RAM usage.
+        current_params = {**backbone_params, "confidence_head": head_params}
         logits = model.apply(
             {"params": current_params}, tokens,
             method=SimpleAttentionNetwork.forward_confidence,
@@ -248,7 +261,7 @@ def run_calibration(
 
     # One compilation per invocation. Only one logical CPU is allocated by
     # the parent add-on; JAX threads are limited in the subprocess env.
-    grad_fn = jax.jit(jax.value_and_grad(loss_fn))
+    grad_fn = jax.jit(jax.value_and_grad(loss_fn, argnums=0))
     losses: list[float] = []
     maximum = max_epochs * len(sequences)
     end = min(step + steps_per_run, maximum)
@@ -258,7 +271,7 @@ def run_calibration(
         tokens, label = sequences[index]
         token_batch = jnp.asarray(tokens[None, :])
         targets = jnp.asarray([label], dtype=jnp.float32)
-        loss, grads = grad_fn(head, token_batch, targets)
+        loss, grads = grad_fn(head, frozen, token_batch, targets)
         loss_value = float(loss)
         if not np.isfinite(loss_value):
             raise RuntimeError("Nonfinite head calibration loss; stopping")
