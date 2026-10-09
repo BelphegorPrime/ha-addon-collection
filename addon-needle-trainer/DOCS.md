@@ -48,18 +48,24 @@ container and does not stop for these jobs.
 - `epochs`: 1–3 (default 1); batch size 1, LoRA rank 4 and sequence
   length 384 are fixed to minimize pressure.
 
-The training subprocess runs with **nice +19**, one CPU affinity and
-an `RLIMIT_AS` virtual-memory bound. It checks the available host memory
-first and refuses to run if it cannot reserve the configured margin.
+The training subprocess runs with **nice +19** and one CPU affinity.
+The previously configured `RLIMIT_AS` virtual-memory limit was removed
+in v0.2.2 because JAX/XLA uses large virtual mappings during compilation,
+which caused `RESOURCE_EXHAUSTED: Failed to allocate buffer for Literal`
+even before the first training step. The `memory_limit_mib` option now
+controls a process-group **resident physical RAM watchdog**. A separate
+`reserve_memory_mib` check monitors available host RAM while training
+and stops the JAX process group if the reserve disappears.
 
-**Important limitations:** `RLIMIT_AS` is *not* an actual cgroup/container
-physical-memory quota, and the Linux CPU affinity is *not* a fractional CPU
-quota. On some hardware JAX reserves a large amount of virtual address space
-and might fail with `MemoryError` despite free physical memory. We never
-remove or increase the limits automatically. Other workloads on the host can
-still contend for RAM or storage. If you require a guaranteed hard physical
-RAM limit and service isolation, run the Docker training workflow on a
-separate host or use Supervisor/container quotas where supported.
+**Important limitations:** The RSS monitor samples memory every 250 ms
+and is a **best-effort safeguard, not a kernel-enforced cgroup physical
+memory cap**. A sudden allocation can exceed the configured amount between
+samples. Linux CPU affinity is not a fractional CPU quota. JAX still
+needs enough **real physical RAM** to compile and train; the minimum number
+of training steps does not reduce the initial XLA compile peak. If you
+require strict memory enforcement, use a Docker/cgroup limit on a separate
+Linux host or appropriate Supervisor/container limits where supported.
+The trainer will not raise the configured budget automatically.
 
 The add-on does **not** request host Docker, privileged access, protected
 mode disablement, or access to Home Assistant configuration. It does not
@@ -286,3 +292,33 @@ to disable offline training or redownload the 242 MB checkpoint.
 You may also simply rerun `mode: download`: when
 `needle3.safetensors` already exists, only the missing tokenizer assets
 are fetched. No network access occurs during `train` or `calibrate`.
+
+
+## RESOURCE_EXHAUSTED during XLA compilation (v0.2.2)
+
+If your v0.2.1 logs show:
+
+```text
+schedule 216 steps ... (compiling...)
+RESOURCE_EXHAUSTED: Failed to allocate buffer for Literal
+```
+
+update the Needle Trainer add-on to **0.2.2**, leave the already downloaded
+checkpoint and tokenizer alone, and rerun `mode: train`. There were no
+completed training steps before compilation aborted.
+
+The fixed trainer does **not** artificially limit JAX's virtual memory.
+It monitors *resident* process-group RAM against `memory_limit_mib`
+(default 4096 MiB), plus the host's available RAM reserve (default
+2048 MiB). The exact peak demand depends on the upstream JAX/XLA version,
+model and platform. There is **no guarantee the full 20-layer backward
+pass fits into 4 GiB**. If the watcher stops the process, choose a
+less busy host with more RAM. Only increase `memory_limit_mib`
+(e.g. 6144 or 8192 MiB) when the HA host has at least that amount
+**plus** the configured reserve genuinely available.
+
+The `calibrate` operation's small `calibration_steps_per_run`
+controls how much *work* is done after model compilation, not the
+initial compilation memory required. The LoRA `train` operation is
+currently one upstream Needle training run; it is not yet checkpointed
+into multiple resumable training slices.
