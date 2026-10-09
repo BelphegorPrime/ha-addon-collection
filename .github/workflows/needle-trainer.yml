@@ -89,3 +89,29 @@ jobs:
             -v "$PWD/addon-needle-trainer/tests:/work/tests:ro" \
             --entrypoint python3 local/needle-trainer:ci \
             /work/tests/smoke_confidence_grad.py
+      - name: Test pinned native Needle 3 engine with real base .cact
+        run: |
+          # An explicit CI-only download of the public 35 MB base archive.
+          # The shipped evaluate_local command is always offline.
+          docker run --rm --entrypoint bash local/needle-trainer:ci -euc '
+            needle download needle3 --out /tmp/needle-native-test
+            test -s /tmp/needle-native-test/needle3.cact
+            test -s "$NEEDLE3_LIB_PATH"
+            export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+            python3 - <<"PY"
+          from needle import Needle
+          from pathlib import Path
+          path = Path("/tmp/needle-native-test/needle3.cact")
+          tools = [
+              {"name": "turn_on", "description": "Turn on light",
+               "parameters": {"type": "object", "properties": {}}},
+              {"name": "turn_off", "description": "Turn off light",
+               "parameters": {"type": "object", "properties": {}}},
+          ]
+          with Needle(tools=tools, weights=str(path), stateless=True, auto_date=False) as agent:
+              # An inert dictionary schema and .complete() cannot execute services.
+              reply = agent.complete("Switch on the light", max_new_tokens=128)
+          assert isinstance(reply, dict), reply
+          print("Offline native Needle 3 .cact decode succeeded")
+          PY
+          '
