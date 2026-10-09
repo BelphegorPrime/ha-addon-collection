@@ -8,6 +8,7 @@ tool-call completions and exports it with the merged adapter instead.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -62,6 +63,7 @@ def save_progress(
     step: int,
     fingerprint: str,
     losses: list[float],
+    total_steps: int,
 ) -> None:
     """Atomic, non-pickle checkpoints; optimizer is deliberately stateless."""
     from flax.traverse_util import flatten_dict
@@ -72,7 +74,7 @@ def save_progress(
     }
     metadata = json.dumps(
         {"version": 1, "step": step, "fingerprint": fingerprint,
-         "recent_loss": losses[-10:]},
+         "total_steps": total_steps, "recent_loss": losses[-10:]},
         sort_keys=True,
     )
     arrays["__meta__"] = np.asarray(metadata)
@@ -84,7 +86,7 @@ def save_progress(
     os.replace(staged, progress)
 
 
-def load_progress(progress: Path, fingerprint: str) -> tuple[dict, int]:
+def load_progress(progress: Path, fingerprint: str) -> tuple[dict, int, int]:
     """Reload head params only if data and source weights are identical."""
     from flax.traverse_util import unflatten_dict
 
@@ -98,7 +100,11 @@ def load_progress(progress: Path, fingerprint: str) -> tuple[dict, int]:
         }
         if not arrays:
             raise ValueError("Empty confidence-head checkpoint")
-        return unflatten_dict(arrays), int(info["step"])
+        return (
+            unflatten_dict(arrays),
+            int(info["step"]),
+            int(info["total_steps"]),
+        )
 
 
 def load_local_model(checkpoint: Path, adapter: Path):
@@ -188,7 +194,12 @@ def run_calibration(
                  for row, label in examples]
     progress = work / "confidence_head.npz"
     if progress.exists():
-        stored_head, step = load_progress(progress, fingerprint)
+        stored_head, step, total_steps = load_progress(progress, fingerprint)
+        if total_steps != max_epochs * len(sequences):
+            raise ValueError(
+                "Calibration epochs changed; use same epoch count or "
+                "move the old checkpoint explicitly"
+            )
         head = jax.tree.map(jnp.asarray, stored_head)
     else:
         head = params["confidence_head"]
@@ -240,6 +251,7 @@ def run_calibration(
         save_progress(
             head, progress,
             step=step, fingerprint=fingerprint, losses=losses,
+            total_steps=maximum,
         )
         print(
             f"Local confidence step {step}/{maximum}: "
@@ -279,16 +291,15 @@ def export_calibrated_candidate(work: Path) -> Path:
                 f"Missing {file}; download both base files and finish head training"
             )
     fingerprint = data_fingerprint(checkpoint, adapter, dataset)
-    head, step = load_progress(progress, fingerprint)
+    head, step, total_steps = load_progress(progress, fingerprint)
     # Do not export partial experiments as candidates.
     # Step completion is checked by caller using the same parameters.
-    if step < 1:
-        raise ValueError("No calibrated confidence steps")
+    if step < total_steps:
+        raise ValueError(
+            f"Calibration incomplete ({step}/{total_steps}): "
+            "finish the remaining slices before export"
+        )
     params, config = load_local_model(checkpoint, adapter)
-    params["confidence_head"] = jnp.asarray(head) if isinstance(head, np.ndarray) else {
-        name: jnp.asarray(value) if isinstance(value, np.ndarray) else value
-        for name, value in head.items()
-    }
     # Keep nested param structure intact for Flax export.
     import jax
     params["confidence_head"] = jax.tree.map(jnp.asarray, head)
@@ -307,3 +318,28 @@ def export_calibrated_candidate(work: Path) -> Path:
         "(NOT approved; benchmark required)", flush=True,
     )
     return output
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Resumable fully-local Needle 3 post-hoc confidence training"
+    )
+    parser.add_argument("command", choices=("calibrate", "export"))
+    parser.add_argument("work", type=Path)
+    parser.add_argument("--steps", type=int, default=8)
+    parser.add_argument("--epochs", type=int, default=2)
+    parser.add_argument("--max-len", type=int, default=384)
+    args = parser.parse_args(argv)
+    if args.command == "calibrate":
+        summary = run_calibration(
+            args.work, steps_per_run=args.steps,
+            max_epochs=args.epochs, max_len=args.max_len,
+        )
+        print(json.dumps(summary, sort_keys=True), flush=True)
+    else:
+        export_calibrated_candidate(args.work)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
