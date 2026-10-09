@@ -198,6 +198,28 @@ class EvaluationTests(unittest.TestCase):
         self.assertFalse((self.work / "approved.json").exists())
         self.assertFalse((self.work / "approved.cact").exists())
 
+    def test_validation_uses_independent_split_and_preserves_test_report(self):
+        rows = make_dataset(self.work)
+        validation = [{**r, "scenario_id": r["scenario_id"] + "-val"}
+                      for r in rows]
+        (self.work / "validation.jsonl").write_text(
+            "".join(json.dumps(x) + "\n" for x in validation)
+        )
+        report_path = self.work / "evaluation" / "test-report.json"
+        report_path.parent.mkdir(parents=True)
+        report_path.write_text("uninspected test report")
+        report = evaluate(
+            self.work, split="validation", needle_cls=FakeNeedle,
+            head_scorer=lambda work, cases: _head_metrics([
+                {"locale": x["locale"], "positive": 0.9, "negative": 0.1}
+                for x in cases
+            ]),
+        )
+        self.assertEqual(report["dataset"]["path"], "validation.jsonl")
+        self.assertEqual(report["dataset"]["cases"], 36)
+        self.assertTrue((self.work / "evaluation" / "validation-report.json").is_file())
+        self.assertEqual(report_path.read_text(), "uninspected test report")
+
     def test_same_quality_is_no_go_even_with_good_head(self):
         class SameNeedle(FakeNeedle):
             def complete(self, query, max_new_tokens):

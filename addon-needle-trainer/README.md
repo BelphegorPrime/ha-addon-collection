@@ -105,3 +105,20 @@ The original root dataset and `train` mode remain unchanged; see [DOCS.md](DOCS.
 
 No new mode approves the candidate, executes Home Assistant actions, or
 lowers the production confidence threshold.
+
+## v0.2.7: separate experiment workflow (no root model writes)
+
+With `prepare_experiment` already completed, follow five manually selected
+modes: `experiment_train` → `experiment_calibrate_all` →
+`experiment_export` → `experiment_validate` → `experiment_test`.
+All outputs are placed only under `experiments/v026/`; the old model,
+LoRA, calibration checkpoint, evaluation and native test dataset remain
+untouched. The new 312-example training set produces 1,248 confidence
+steps at two calibration epochs.
+
+`experiment_test` refuses to access the unchanged held-out test dataset
+unless a valid, successful independent 36-case validation report for
+the exact same candidate has already been saved. A validation `NO_GO`
+produces a JSON report and a deliberate nonzero exit; do not bypass this
+gate. **No automatic approval or Home Assistant action occurs.**
+See [DOCS.md](DOCS.md) for exact modes, output paths, and resource settings.

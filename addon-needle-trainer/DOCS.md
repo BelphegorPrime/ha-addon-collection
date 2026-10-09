@@ -309,6 +309,70 @@ are fetched. No network access occurs during `train` or `calibrate`.
 
 
 
+## v0.2.7: isolated experiment training (after prepare_experiment)
+
+The first dataset preparation step (`mode: prepare_experiment`) already
+staged the training data under `/share/needle-training/experiments/v026/`.
+**Do not rerun prepare_experiment**; it refuses to overwrite that folder.
+
+Update the trainer to **v0.2.7** before running the following manually
+triggered steps. Keep the same resource options
+(`confirm_resource_use: true`, `memory_limit_mib: 6144`,
+`reserve_memory_mib: 2048`, `cpu_core: 3`), and set `epochs: 1` and
+`calibration_epochs: 2`. No steps run in the background.
+
+1. **`mode: experiment_train`**: locally train LoRA on the **312** staged
+   rows with unchanged base checkpoint and limited CPU/RSS watchdog. Save
+   `experiments/v026/needle_lora.safetensors`; checkpoint files and the
+   immutable model/data provenance snapshot stay **inside the experiment**.
+   Training will not overwrite a previous experiment LoRA or old root LoRA.
+2. **`mode: experiment_calibrate_all`**: use the **experiment's** new LoRA,
+   the same frozen base and the staged dataset to train a separate,
+   *resumable* confidence head (312 × 2 labeled completions × 2 epochs =
+   **1,248 steps**). Saves an independent
+   `experiments/v026/confidence_head.npz`. This may take substantial CPU
+   resources but is bounded by the same RAM guard.
+3. **`mode: experiment_export`**: only after calibration has `finished:
+   true`, export `experiments/v026/candidate-local-confidence.cact`.
+   Refuses to overwrite an existing experiment candidate.
+4. **`mode: experiment_validate`**: before inspecting the untouched test
+   split, run 36 independently held-back *validation* scenarios through the
+   native baseline and newly exported candidate, plus 36 paired JAX head
+   diagnostics. Writes
+   `experiments/v026/evaluation/validation-report.json`. A `NO_GO`
+   result deliberately exits nonzero **after writing the report**; it
+   means the experiment needs improvement before exposing the true test set.
+5. **`mode: experiment_test`**: only runs if the saved validation report
+   corresponds to the **same exported weights**, refers to the independent
+   validation split, and returned `CANDIDATE_FOR_MANUAL_REVIEW`. Then,
+   and only then, evaluate against the unchanged 36 original held-out test
+   cases and save `experiments/v026/evaluation/test-report.json`.
+
+Existing root files remain untouched:
+
+```text
+/share/needle-training/needle_lora.safetensors
+/share/needle-training/confidence_head.npz
+/share/needle-training/candidate-local-confidence.cact
+/share/needle-training/evaluation/test-report.json
+```
+
+The experiment's immutable staged `train.jsonl`, `validation.jsonl`,
+`test.jsonl` and `scenarios.json` are checked against the SHA256 hashes
+written during `prepare_experiment` **before every job**. The original
+root test dataset must also still match byte-for-byte. Reference
+`needle3.safetensors` and `needle3.cact` within the experiment are
+verified **symlinks to the original base**, never output destinations.
+A new `model_input_snapshot.json` captures model and dataset fingerprints
+before training starts, which subsequent phases re-check. A changed original
+base or mutated experiment dataset fails closed.
+
+The validation suite currently contains only six scenario groups, so even
+a passing validation is not a reliability or safety certificate.
+**Never auto-approve/deploy**: this experiment cannot create
+`approved.cact`, `approved.json`, or modify the live Needle add-on.
+The 0.8 HA execution gate remains unchanged.
+
 ## v0.2.6: diagnostic report and isolated safety-training experiment
 
 The first genuine native six-language evaluation of our local candidate yielded
