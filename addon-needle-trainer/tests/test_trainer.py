@@ -30,6 +30,8 @@ class TrainerTests(unittest.TestCase):
             "reserve_memory_mib": 2048,
             "cpu_core": -1,
             "epochs": 1,
+            "calibration_steps_per_run": 8,
+            "calibration_epochs": 2,
         }
 
     def save(self, **override) -> None:
