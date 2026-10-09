@@ -11,12 +11,12 @@ training isolated and manually controlled. No automated retraining,
 model replacement or HA service execution occurs.
 
 Read [DOCS.md](DOCS.md) before use. Full local workflow:
-**prepare → download → download_base → train → calibrate (repeat in
-small batches) → export_local**. All steps run in the isolated trainer
+**prepare → download → download_base → train → calibrate_all → export_local**. All steps run in the isolated trainer
 container and require manual confirmation; only the two downloads use
-the internet. The default slice trains eight confidence-head examples
-per start and resumes from an atomic checkpoint. Weak hosts may still
-run out of RAM.
+the internet. The default bounded `calibrate` slice trains eight confidence-head examples
+per start. `calibrate_all` instead trains every remaining step in a single
+manual run; both resume from the same atomic per-step checkpoint.
+Weak hosts may still run out of RAM.
 
 The resulting `candidate-local-confidence.cact` includes the locally
 trained post-hoc head, but its calibration and safety are **not proven**.
@@ -48,3 +48,14 @@ differentiation, including Engram embedding tables. It also supplies the
 frozen transformer as a dynamic JIT input, preventing huge XLA compiled
 constants. CI now performs an actual tiny Needle Engram and confidence-head
 forward/backward pass using the pinned JAX image.
+
+
+**v0.2.4 resumable single-start calibration:** Select `mode: calibrate_all`
+to continue from the existing `confidence_head.npz` (e.g., step 40 of 864)
+and finish every remaining step in the same low-priority, offline run.
+The 250 ms RAM watchdog, CPU affinity and reserve checks are unchanged.
+Every successful step still writes an atomic checkpoint, permitting a later
+manual restart after interruptions. The mode never runs automatically on
+boot, never exports a model, and never promotes a model for HA actions.
+`calibration_steps_per_run` remains relevant only to the bounded `calibrate`
+mode. See [DOCS.md](DOCS.md#continuous-resumable-confidence-calibration-v024).
