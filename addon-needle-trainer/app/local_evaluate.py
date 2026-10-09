@@ -41,7 +41,7 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def validate_held_out(work: Path) -> list[dict[str, Any]]:
+def validate_held_out(work: Path, *, split: str = "test") -> list[dict[str, Any]]:
     """Do not accidentally publish train-set accuracy as held-out results."""
     needed = ("train", "validation", "test")
     splits = {}
@@ -91,15 +91,17 @@ def validate_held_out(work: Path) -> list[dict[str, Any]]:
         if ids[x] & ids[y]:
             raise ValueError(f"{x}/{y} scenario contamination; refusing benchmark")
 
-    test = splits["test"]
-    # The curated held-out suite is 6 scenario groups x 6 locales = 36.
-    if len(test) != 36 or {x["locale"] for x in test} != set(LANGUAGES):
-        raise ValueError("Expected exactly 36 held-out cases in all six locales")
-    if not any(not row["answers"] for row in test):
-        raise ValueError("No no-action examples in held-out test")
-    if not any(row["risk"] == "critical" for row in test):
-        raise ValueError("No critical safety tests in held-out suite")
-    return test
+    if split not in ("validation", "test"):
+        raise ValueError("Only independent validation or held-out test allowed")
+    selected = splits[split]
+    # Six distinct scenario groups x six locales per split, never training.
+    if len(selected) != 36 or {x["locale"] for x in selected} != set(LANGUAGES):
+        raise ValueError(f"Expected exactly 36 {split} cases in all six locales")
+    if not any(not row["answers"] for row in selected):
+        raise ValueError(f"No no-action examples in {split} dataset")
+    if not any(row["risk"] == "critical" for row in selected):
+        raise ValueError(f"No critical safety cases in {split} dataset")
+    return selected
 
 
 def confidence_value(reply: dict[str, Any]) -> float | None:
@@ -405,7 +407,7 @@ def write_report(output: Path, report: dict[str, Any]) -> None:
 
 
 def evaluate(work: Path, *, gate: float = GATE, needle_cls=None,
-             head_scorer=None) -> dict:
+             head_scorer=None, split: str = "test") -> dict:
     """Benchmark native exported baseline+candidate, then JAX head-only pairs."""
     if not 0 < gate <= 1 or not math.isfinite(gate):
         raise ValueError("Gate must be a finite value in (0, 1]")
@@ -415,7 +417,7 @@ def evaluate(work: Path, *, gate: float = GATE, needle_cls=None,
         if not library.is_file() or not library.stat().st_size:
             raise RuntimeError("Offline Needle 3 engine missing: image must bundle "
                                "NEEDLE3_LIB_PATH; never download at runtime")
-    dataset = validate_held_out(work)
+    dataset = validate_held_out(work, split=split)
     base = work / "needle3.cact"
     candidate = work / "candidate-local-confidence.cact"
     for model in (base, candidate):
@@ -432,8 +434,8 @@ def evaluate(work: Path, *, gate: float = GATE, needle_cls=None,
         "purpose": "read_only_held_out_never_deploy",
         "confidence_gate": gate,
         "dataset": {
-            "path": "test.jsonl",
-            "sha256": sha256_file(work / "test.jsonl"),
+            "path": f"{split}.jsonl",
+            "sha256": sha256_file(work / f"{split}.jsonl"),
             "cases": len(dataset),
             "scenario_groups": len({r["scenario_id"] for r in dataset}),
             "languages": list(LANGUAGES),
@@ -456,7 +458,7 @@ def evaluate(work: Path, *, gate: float = GATE, needle_cls=None,
     results["posthoc_head_jax"] = head
     results["posthoc_head_error"] = error
     results["decision"] = verdict_for(baseline, tuned, head, head_error=error)
-    output = work / "evaluation" / "test-report.json"
+    output = work / "evaluation" / f"{split}-report.json"
     write_report(output, results)
     print(
         json.dumps({
@@ -478,8 +480,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("work", type=Path, nargs="?", default=WORK)
     parser.add_argument("--gate", type=float, default=GATE)
+    parser.add_argument("--split", choices=("validation", "test"), default="test")
     args = parser.parse_args(argv)
-    outcome = evaluate(args.work, gate=args.gate)
+    outcome = evaluate(args.work, gate=args.gate, split=args.split)
     # A safety fail stays a failed add-on job; full JSON report is still saved.
     return 0 if outcome["decision"]["verdict"] == "CANDIDATE_FOR_MANUAL_REVIEW" else 2
 
