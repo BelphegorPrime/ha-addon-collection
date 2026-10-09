@@ -92,8 +92,11 @@ def run(
 ) -> int:
     opts = options_from(options_path)
     mode = opts.get("mode", "idle")
-    if mode not in ("idle", "prepare", "download", "train", "build"):
-        raise ValueError("mode must be idle, prepare, download, train or build")
+    if mode not in (
+        "idle", "prepare", "download", "download_base",
+        "train", "calibrate", "export_local", "build",
+    ):
+        raise ValueError("mode must be idle, prepare, download, download_base, train, calibrate, export_local or build")
     if mode == "idle":
         print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
         return 0
@@ -106,6 +109,8 @@ def run(
     reserve = integer(opts, "reserve_memory_mib", 1024, 16384)
     cpu_core = integer(opts, "cpu_core", -1, 4095)
     epochs = integer(opts, "epochs", 1, 3)
+    calibration_steps = integer(opts, "calibration_steps_per_run", 1, 32)
+    calibration_epochs = integer(opts, "calibration_epochs", 1, 5)
     if mode == "build" and opts.get("confirm_uncalibrated_export") is not True:
         raise ValueError(
             "Build requires confirm_uncalibrated_export=true because the "
@@ -145,9 +150,10 @@ def run(
     })
     checkpoint = work / "needle3.safetensors"
 
-    if mode == "download":
-        # Explicit mode downloads the upstream trainable safetensors checkpoint.
-        cmd = ["needle", "download", "needle3.safetensors", "--out", str(work)]
+    if mode in ("download", "download_base"):
+        # These two explicit modes alone download published Needle artifacts.
+        target = "needle3.safetensors" if mode == "download" else "needle3"
+        cmd = ["needle", "download", target, "--out", str(work)]
     else:
         if not checkpoint.is_file():
             raise FileNotFoundError(
@@ -168,6 +174,26 @@ def run(
                 "--lora", str(adapter),
                 "--out", str(work / "experimental-uncalibrated.cact"),
             ]
+        elif mode in ("calibrate", "export_local"):
+            env["HF_HUB_OFFLINE"] = "1"
+            env["TRANSFORMERS_OFFLINE"] = "1"
+            if not (work / "needle_lora.safetensors").is_file():
+                raise FileNotFoundError(
+                    "Missing LoRA adapter; run mode=train first."
+                )
+            if mode == "export_local":
+                cmd = [
+                    sys.executable, "-u", "/app/local_confidence.py",
+                    "export", str(work),
+                    "--epochs", str(calibration_epochs),
+                ]
+            else:
+                cmd = [
+                    sys.executable, "-u", "/app/local_confidence.py",
+                    "calibrate", str(work),
+                    "--steps", str(calibration_steps),
+                    "--epochs", str(calibration_epochs),
+                ]
         else:
             env["HF_HUB_OFFLINE"] = "1"
             env["TRANSFORMERS_OFFLINE"] = "1"
@@ -197,13 +223,30 @@ def run(
         flush=True,
     )
     run_command(cmd, env=env, max_ram_mib=ram, core=core)
-    if mode == "download":
-        # Needle's CLI can place the checkpoint in a subfolder in some builds.
-        nested = work / "checkpoints" / "needle3.safetensors"
-        if not checkpoint.is_file() and nested.is_file():
-            checkpoint.symlink_to(nested.relative_to(work))
-        if not checkpoint.is_file():
-            raise RuntimeError("Download returned without a checkpoint. Check logs.")
+    if mode in ("download", "download_base"):
+        target = "needle3.safetensors" if mode == "download" else "needle3.cact"
+        expected = work / target
+        nested = work / "checkpoints" / target
+        if not expected.is_file() and nested.is_file():
+            expected.symlink_to(nested.relative_to(work))
+        if not expected.is_file():
+            raise RuntimeError(
+                f"Download returned without {target}. Check logs."
+            )
+    elif mode == "calibrate":
+        print(
+            "Confidence training slice saved; run calibrate again to "
+            "continue, or export_local only after all steps are complete.",
+            flush=True,
+        )
+    elif mode == "export_local":
+        if not (work / "candidate-local-confidence.cact").is_file():
+            raise RuntimeError("Local export did not produce a .cact model")
+        print(
+            "Local confidence candidate is ready for separate six-language "
+            "evaluation. It is NOT deployed or auto-approved.",
+            flush=True,
+        )
     elif mode == "build":
         if not (work / "experimental-uncalibrated.cact").is_file():
             raise RuntimeError("Build succeeded without producing a .cact archive")
