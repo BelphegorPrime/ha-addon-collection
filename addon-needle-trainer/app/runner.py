@@ -241,7 +241,10 @@ def run(
             env=env, max_ram_mib=ram,
             reserve_memory_mib=reserve, core=core,
         )
-    run_command(cmd, env=env, max_ram_mib=ram, core=core)
+    run_command(
+        cmd, env=env, max_ram_mib=ram,
+        reserve_memory_mib=reserve, core=core,
+    )
     if mode in ("download", "download_base", "download_tokenizer"):
         if mode in ("download", "download_base"):
             target = (
@@ -263,7 +266,8 @@ def run(
             if cmd != tokenizer_command:
                 run_command(
                     tokenizer_command, env=env,
-                    max_ram_mib=ram, core=core,
+                    max_ram_mib=ram,
+                    reserve_memory_mib=reserve, core=core,
                 )
         if mode in ("download", "download_tokenizer"):
             from tokenizer_assets import verify_assets
