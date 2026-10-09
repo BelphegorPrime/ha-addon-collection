@@ -104,7 +104,8 @@ def choose_weights(
         metadata = json.loads(approval.read_text(encoding="utf-8"))
         if not valid_approval(metadata):
             raise ValueError("Missing or incomplete calibrated-model attestation")
-        digest = hashlib.file_digest(candidate.open("rb"), "sha256").hexdigest()
+        with candidate.open("rb") as file:
+            digest = hashlib.file_digest(file, "sha256").hexdigest()
         if digest.lower() != metadata["sha256"].lower():
             raise ValueError("Model SHA256 does not match its approval record")
         if candidate.stat().st_size < 1024:
