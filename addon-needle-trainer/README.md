@@ -87,3 +87,21 @@ the report even if the HA add-on job shows an error.
 Nothing is auto-approved. Even `CANDIDATE_FOR_MANUAL_REVIEW` is not
 permission to deploy to Home Assistant. See [DOCS.md](DOCS.md) for the
 interpretation and safety limitations.
+
+## v0.2.6: diagnose before retraining
+
+Run `mode: diagnose_local` (plus `confirm_resource_use: true`) to
+re-analyze the saved native baseline/candidate test report in seconds,
+without rerunning JAX or inference. Inspect
+`/share/needle-training/evaluation/diagnosis.json` for failures by scenario,
+language and family, and a **diagnostic-only** confidence threshold sweep.
+
+Run `mode: prepare_experiment` to stage a separate train-only augmentation
+of 96 multilingual safety and positive-command examples, without replacing
+the existing checkpoint, LoRA, candidate, or held-out test data.
+This creates `/share/needle-training/experiments/v026/` (312 training
+examples, unchanged 36 validation and 36 test). **No training occurs.**
+The original root dataset and `train` mode remain unchanged; see [DOCS.md](DOCS.md).
+
+No new mode approves the candidate, executes Home Assistant actions, or
+lowers the production confidence threshold.
