@@ -1,0 +1,61 @@
+name: Needle Trainer
+on:
+  push:
+    branches:
+      - master
+      - 'feat/**'
+    paths:
+      - 'addon-needle-trainer/**'
+      - '.github/workflows/needle-trainer.yml'
+  pull_request:
+    paths:
+      - 'addon-needle-trainer/**'
+      - '.github/workflows/needle-trainer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate addon manifest
+        run: |
+          python -m pip install --disable-pip-version-check PyYAML
+          python - <<'PY'
+          import yaml
+          from pathlib import Path
+          config = yaml.safe_load(Path("addon-needle-trainer/config.yaml").read_text())
+          assert config["boot"] == "manual"
+          assert config["startup"] == "once"
+          assert config["options"]["mode"] == "idle"
+          assert config["options"]["confirm_resource_use"] is False
+          assert config["map"] == [{"type": "share", "read_only": False}]
+          assert config["arch"] == ["amd64", "aarch64"]
+          print("One-shot trainer manifest is safe by default.")
+          PY
+      - name: Check Python and curate training corpus
+        run: |
+          python -m compileall -q addon-needle-trainer/app
+          python addon-needle-trainer/app/training/workflow.py prepare --output "${RUNNER_TEMP}/needle-data"
+      - name: Offline resource safety tests
+        run: python -m unittest discover -s addon-needle-trainer/tests -v
+
+  image:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated training image (amd64)
+        run: |
+          docker build --pull -f addon-needle-trainer/Dockerfile \
+            --build-arg BUILD_ARCH=amd64 \
+            --build-arg NEEDLE_VERSION=3.1.3 \
+            -t local/needle-trainer:ci addon-needle-trainer
+      - name: Check pinned Needle CLI
+        run: docker run --rm --entrypoint needle local/needle-trainer:ci --help
