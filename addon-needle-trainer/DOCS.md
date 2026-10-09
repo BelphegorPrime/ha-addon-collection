@@ -37,7 +37,7 @@ container and does not stop for these jobs.
 
 - `mode`: `idle` (default), `prepare`, `download`,
   `download_tokenizer`, `download_base`, `train`, `calibrate`,
-  `calibrate_all`, `export_local` or `build`.
+  `calibrate_all`, `export_local`, `evaluate_local` or `build`.
 - `confirm_resource_use`: mandatory `true` for non-idle modes.
 - `confirm_uncalibrated_export`: separately required for `build`.
 - `memory_limit_mib`: 2048–12288 (default 4096).
@@ -308,6 +308,85 @@ You may also simply rerun `mode: download`: when
 are fetched. No network access occurs during `train` or `calibrate`.
 
 
+
+## Native exported-model benchmark and head diagnostics (v0.2.5)
+
+After `finished: true` for confidence calibration, manually start
+`mode: export_local` once. Verify the trainer prints:
+
+```text
+Exported local confidence candidate: /share/needle-training/candidate-local-confidence.cact (NOT approved; benchmark required)
+```
+
+Next update the trainer to v0.2.5 and select:
+
+```yaml
+mode: evaluate_local
+confirm_resource_use: true
+memory_limit_mib: 6144
+reserve_memory_mib: 2048
+cpu_core: 3
+calibration_epochs: 2
+```
+
+One manual **Start** runs two intentionally independent evaluations
+against the 36 untouched `test.jsonl` examples in six languages. The
+trainer requires intact train/validation/test files and ensures scenario
+groups do **not** overlap. It does not regenerate a test split or touch
+the stored `needle_lora.safetensors` or `confidence_head.npz`.
+
+1. **Exported `.cact` native inference (end-to-end):** the trainer image
+   bundles a pinned Needle 3 engine during installation. With
+   `HF_HUB_OFFLINE=1`, it loads **both**
+   `/share/needle-training/needle3.cact` and
+   `/share/needle-training/candidate-local-confidence.cact` into isolated
+   local Python Needle workers. Each independent test query is reset.
+   Only `Needle.complete()` is called with inert JSON tool descriptions;
+   **never `Needle.run()`, any executable Python tools, Home Assistant
+   APIs or service commands**. Every generated call is only *compared* to
+   the gold label. The conservative HA confidence gate is 0.8.
+   The report includes accepted-correct, correct rejections,
+   missed-valid actions, unsafe approvals, missing confidence and latency,
+   broken down by language and risk. It also separately summarizes
+   **native combined confidence** by exact generated action correctness,
+   where available.
+2. **Paired post-hoc confidence-head diagnostics:** on the same 36 held-out
+   user queries, JAX evaluates the learned `confidence_head.npz` with
+   the frozen LoRA-merged float32 checkpoint for each completed correct
+   call and one deliberately incorrect call (72 completions total).
+   The report compares score distribution, paired ranking accuracy,
+   0.8-threshold classification rate, Brier score and per-language
+   scores. These are **head-only probabilities on float32 checkpoint
+   weights**, not the quantized exported `.cact` runtime confidence,
+   so they MUST NOT be substituted for the native results.
+   The diagnostic does not generate new actions or perform any HA work.
+
+A JSON report is written atomically to:
+
+```text
+/share/needle-training/evaluation/test-report.json
+```
+
+The report includes a `decision.verdict` field:
+- `NO_GO` means incomplete measurements, missing scores, any unsafe
+  approval, regression in refusals, no improvement over the native base,
+  or unsuccessful confidence-head diagnostics.
+- `CANDIDATE_FOR_MANUAL_REVIEW` means those **minimal gates** passed.
+  It **does not approve deployment**. Human review and more realistic
+  regression tests with actual exposed Home Assistant entities, target
+  grounding, ambiguous doors/locks and expected service-call safeguards
+  remain mandatory before any production use.
+
+The `NO_GO` result intentionally exits nonzero **after persisting** the
+report. The HA add-on job can therefore appear failed, but the report
+provides the actual measured reason. Native or JAX model errors must
+never be counted as a correct refusal.
+
+`evaluate_local` requires at least the configured RAM budget plus the
+free-host reserve before starting and is monitored by the same best-effort
+physical RSS watchdog. No URL, credentials or network endpoint can be
+configured as an evaluation target. It never writes `approved.cact`,
+`approved.json` or the live Needle inference configuration.
 
 ## Continuous resumable confidence calibration (v0.2.4)
 
