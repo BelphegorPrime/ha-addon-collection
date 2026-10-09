@@ -322,3 +322,29 @@ controls how much *work* is done after model compilation, not the
 initial compilation memory required. The LoRA `train` operation is
 currently one upstream Needle training run; it is not yet checkpointed
 into multiple resumable training slices.
+
+
+## TracerArrayConversionError during `calibrate` (v0.2.3)
+
+After a successful 216-step LoRA training, older trainer versions could
+abort the first confidence calibration step in
+`needle/model/architecture.py:449` with
+`TracerArrayConversionError` while indexing an Engram embedding.
+The original checkpoint loader returns NumPy arrays. The old LoRA merge
+converted only its modified weight groups to JAX arrays, leaving Engram
+lookup tables as NumPy ndarrays incompatible with JAX-traced indexing.
+
+Update **Needle Trainer to 0.2.3** and repeat `mode: calibrate` with the
+same resource settings. The fix converts **all** base weights to JAX arrays
+before merging and passes the frozen backbone as a dynamic argument to
+the jitted head-loss function. Neither a new LoRA training run nor another
+download is required. Since the failure happened before the first
+calibration step, `confidence_head.npz` normally does not exist yet.
+If you previously completed any calibration slices, the existing
+checkpoint is retained and resumed; model/data fingerprints still guard
+against mismatched source files.
+
+The confidence-head path is experimental. A CI-tested tiny JAX gradient
+does not yet prove full-model calibration quality, acceptable memory
+consumption or safe automatic HA tool execution. Do not auto-promote
+candidate `.cact` files before a separate held-out benchmark.
