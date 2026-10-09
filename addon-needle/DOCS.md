@@ -138,6 +138,7 @@ Example using Needle's bundled base model:
 
 ```yaml
 weights: ""
+auto_trained_weights: true
 ```
 
 ### `weights`
@@ -157,6 +158,83 @@ To keep custom weights across add-on updates:
 
 Startup fails with a descriptive log message if the path is relative or the
 file does not exist.
+
+
+## Automatic selection of approved trained models
+
+Since add-on `3.1.3-6`, Needle checks
+`/share/needle-training/approved.cact` on startup when
+`auto_trained_weights: true` (default). Both the
+[Needle Trainer](../addon-needle-trainer) and this inference add-on
+mount Home Assistant's same `/share` directory. No model copy between
+containers is needed.
+
+Model precedence:
+
+1. A non-empty explicit `weights` setting wins, as before.
+2. If automatic selection is enabled, and `approved.cact` and
+   `approved.json` both pass checks, load the approved custom model.
+3. Otherwise, continue to use the bundled Needle base model. Rejection
+   is logged at startup and does not disable inference.
+
+The manifest is a **manual review attestation**, not an AI-generated
+security certificate. The add-on checks that it matches the model's
+SHA256 and records independent evaluation in all six supported languages.
+It refuses manifest-free files, incomplete safety evaluations, altered
+files and known uncalibrated LoRA exports.
+
+The JSON schema is:
+
+```json
+{
+  "schema_version": 1,
+  "model_file": "approved.cact",
+  "sha256": "<64 lowercase SHA256 hex characters>",
+  "confidence_head": "verified",
+  "human_reviewed": true,
+  "confidence_threshold": 0.8,
+  "evaluation": {
+    "unsafe_approvals": 0,
+    "missing_confidence": 0,
+    "transport_errors": 0,
+    "critical_unsafe_approvals": 0,
+    "by_locale": {
+      "de": {"cases": 6, "unsafe_approvals": 0, "missing_confidence": 0, "transport_errors": 0},
+      "en": {"cases": 6, "unsafe_approvals": 0, "missing_confidence": 0, "transport_errors": 0},
+      "fr": {"cases": 6, "unsafe_approvals": 0, "missing_confidence": 0, "transport_errors": 0},
+      "es": {"cases": 6, "unsafe_approvals": 0, "missing_confidence": 0, "transport_errors": 0},
+      "it": {"cases": 6, "unsafe_approvals": 0, "missing_confidence": 0, "transport_errors": 0},
+      "nl": {"cases": 6, "unsafe_approvals": 0, "missing_confidence": 0, "transport_errors": 0}
+    }
+  }
+}
+```
+
+**Do not use this example as an approval without real measurements.**
+A synthetic/manual manifest can only declare that a competent operator
+verified a confidence-head-retaining model using a dedicated Needle
+benchmark server and inspected all test cases. The add-on cannot prove
+a model is trustworthy merely from a checksum or JSON file; its own
+Home Assistant routing integration still enforces the 0.8 confidence
+check independently for every actual request.
+
+The built-in trainer currently exports a local LoRA adapter and can
+optionally build `experimental-uncalibrated.cact`. Needle's upstream
+LoRA exporter **drops the confidence head**. Such models are never
+automatically selected, irrespective of their filename. A model with a
+calibrated head requires a separate upstream training method or
+confidence-capable export and a real safety review.
+
+To disable this behavior completely, configure:
+
+```yaml
+weights: ""
+auto_trained_weights: false
+```
+
+Newly approved models are detected when the add-on **restarts**.
+Automatic model discovery does not trigger background training or
+hot-swap the running model mid-request.
 
 ## Network
 
