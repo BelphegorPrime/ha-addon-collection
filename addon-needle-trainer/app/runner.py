@@ -1,0 +1,201 @@
+"""One-shot Needle trainer for Home Assistant OS.
+
+Never starts on boot, never calls Home Assistant services, never swaps live
+weights. A separate add-on container protects the running Needle playground.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import resource
+import subprocess
+import sys
+from pathlib import Path
+
+from training.workflow import LANGUAGES, SPLITS, load_scenarios, prepared_rows, write_jsonl
+
+OPTIONS = Path("/data/options.json")
+WORK = Path("/share/needle-training")
+SCENARIOS = Path("/app/training/scenarios.json")
+MIB = 1024 * 1024
+
+
+def options_from(path: Path) -> dict:
+    options = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(options, dict):
+        raise ValueError("options.json must be an object")
+    return options
+
+
+def integer(options: dict, name: str, low: int, high: int) -> int:
+    value = options.get(name)
+    if type(value) is not int or not low <= value <= high:
+        raise ValueError(f"{name} must be an integer in {low}..{high}")
+    return value
+
+
+def available_ram_mib() -> int:
+    with open("/proc/meminfo", encoding="ascii") as handle:
+        for line in handle:
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) // 1024
+    raise RuntimeError("Cannot determine available host memory; refusing to train")
+
+
+def apply_limits(max_ram_mib: int, core: int) -> None:
+    """Run in subprocess; bound address space and use one low-priority CPU."""
+    # RLIMIT_AS is not a cgroup RAM limit; it is deliberately conservative
+    # and may reject JAX's large virtual mappings before physical RAM fills.
+    limit = max_ram_mib * MIB
+    resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+    os.sched_setaffinity(0, {core})
+    os.nice(19)
+
+
+def run_command(
+    command: list[str], *,
+    env: dict[str, str],
+    max_ram_mib: int,
+    core: int,
+) -> None:
+    subprocess.run(
+        command, check=True, env=env,
+        preexec_fn=lambda: apply_limits(max_ram_mib, core),
+    )
+
+
+def choose_cpu(core: int) -> int:
+    allowed = sorted(os.sched_getaffinity(0))
+    if not allowed:
+        raise RuntimeError("No schedulable CPU available")
+    if core == -1:
+        return allowed[-1]
+    if core not in allowed:
+        raise ValueError("Selected CPU core is not in the allowed CPU affinity")
+    return core
+
+
+def prepare(work: Path, scenarios_file: Path) -> None:
+    scenarios = load_scenarios(scenarios_file)
+    work.mkdir(parents=True, exist_ok=True)
+    for split in SPLITS:
+        rows = prepared_rows(scenarios, split)
+        write_jsonl(work / f"{split}.jsonl", rows)
+        print(f"{split}: {len(rows)} examples in {len(LANGUAGES)} languages", flush=True)
+
+
+def run(
+    options_path: Path = OPTIONS,
+    work: Path = WORK,
+    scenarios: Path = SCENARIOS,
+) -> int:
+    opts = options_from(options_path)
+    mode = opts.get("mode", "idle")
+    if mode not in ("idle", "prepare", "download", "train"):
+        raise ValueError("mode must be idle, prepare, download or train")
+    if mode == "idle":
+        print("Idle. Choose a one-shot mode, save options and manually start this add-on.")
+        return 0
+    if opts.get("confirm_resource_use") is not True:
+        raise ValueError(
+            "Set confirm_resource_use=true before running a one-shot job. "
+            "Reset mode to idle after finishing."
+        )
+    ram = integer(opts, "memory_limit_mib", 2048, 12288)
+    reserve = integer(opts, "reserve_memory_mib", 1024, 16384)
+    cpu_core = integer(opts, "cpu_core", -1, 4095)
+    epochs = integer(opts, "epochs", 1, 3)
+    work.mkdir(parents=True, exist_ok=True)
+
+    if mode == "prepare":
+        prepare(work, scenarios)
+        print("Prepared data under /share/needle-training.")
+        return 0
+
+    if available_ram_mib() < ram + reserve:
+        raise RuntimeError(
+            f"Refusing {mode}: need >= {ram + reserve} MiB MemAvailable "
+            f"({ram} MiB cap plus {reserve} MiB reserved for Home Assistant). "
+            "Choose a less busy time or use a separate training host."
+        )
+    core = choose_cpu(cpu_core)
+    env = dict(os.environ)
+    # No automatic cloud augmentation or accidental token use.
+    for key in ("OPENROUTER_API_KEY", "NEEDLE_API_KEY", "HF_TOKEN"):
+        env.pop(key, None)
+    env.update({
+        "JAX_PLATFORMS": "cpu",
+        "JAX_NUM_CPU_DEVICES": "1",
+        "JAX_ENABLE_X64": "false",
+        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "NEEDLE_TELEMETRY": "0",
+        "DO_NOT_TRACK": "1",
+        "HOME": str(work),
+        "HF_HOME": str(work / "hf"),
+    })
+    checkpoint = work / "needle3.safetensors"
+
+    if mode == "download":
+        # Only this explicit mode is allowed to download from the internet.
+        cmd = ["needle", "download", "needle3.safetensors", "--out", str(work)]
+    else:
+        env["HF_HUB_OFFLINE"] = "1"
+        env["TRANSFORMERS_OFFLINE"] = "1"
+        if not checkpoint.is_file():
+            raise FileNotFoundError(
+                f"Missing {checkpoint}; run mode=download first."
+            )
+        train = work / "train.jsonl"
+        if not train.is_file():
+            raise FileNotFoundError(
+                f"Missing {train}; run mode=prepare first."
+            )
+        cmd = [
+            "needle", "finetune", str(train),
+            "--checkpoint", str(checkpoint),
+            "--epochs", str(epochs),
+            "--batch-size", "1",
+            "--max-len", "384",
+            "--lora-rank", "4",
+            "--lora-alpha", "8",
+            "--generate", "0",
+            "--workers", "1",
+            "--val-split", "0",
+            "--seed", "42",
+            "--checkpoint-dir", str(work / "checkpoints"),
+            "--out", str(work / "needle_lora.safetensors"),
+        ]
+    print(
+        f"Starting one-shot {mode}: CPU #{core}, low priority; virtual address "
+        f"limit {ram} MiB; {reserve} MiB host reserve (not a cgroup limit).",
+        flush=True,
+    )
+    run_command(cmd, env=env, max_ram_mib=ram, core=core)
+    if mode == "download":
+        # Needle's CLI can place the checkpoint in a subfolder in some builds.
+        nested = work / "checkpoints" / "needle3.safetensors"
+        if not checkpoint.is_file() and nested.is_file():
+            checkpoint.symlink_to(nested.relative_to(work))
+        if not checkpoint.is_file():
+            raise RuntimeError("Download returned without a checkpoint. Check logs.")
+    else:
+        print(
+            "LoRA adapter saved. NOT usable for automatic HA approval: "
+            "the locally exported model would have confidence=null.",
+            flush=True,
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(run())
+    except (ValueError, RuntimeError, FileNotFoundError, OSError,
+            subprocess.CalledProcessError) as exc:
+        print(f"Needle Trainer: {exc}", file=sys.stderr, flush=True)
+        sys.exit(1)
