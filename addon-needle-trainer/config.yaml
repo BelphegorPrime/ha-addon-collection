@@ -1,0 +1,28 @@
+name: "Needle Trainer (Experimental)"
+description: "Manual, low-priority CPU-only Needle LoRA experiments on your HA host"
+version: "0.1.0"
+slug: "addon_needle_trainer"
+url: "https://github.com/BelphegorPrime/ha-addon-collection/tree/master/addon-needle-trainer"
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: once
+boot: manual
+map:
+  - type: share
+    read_only: false
+options:
+  mode: "idle"
+  confirm_resource_use: false
+  memory_limit_mib: 4096
+  reserve_memory_mib: 2048
+  cpu_core: -1
+  epochs: 1
+schema:
+  mode: "list(idle|prepare|download|train)"
+  confirm_resource_use: bool
+  memory_limit_mib: int
+  reserve_memory_mib: int
+  cpu_core: int
+  epochs: int
