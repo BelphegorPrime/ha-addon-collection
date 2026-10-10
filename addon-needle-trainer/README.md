@@ -122,3 +122,15 @@ the exact same candidate has already been saved. A validation `NO_GO`
 produces a JSON report and a deliberate nonzero exit; do not bypass this
 gate. **No automatic approval or Home Assistant action occurs.**
 See [DOCS.md](DOCS.md) for exact modes, output paths, and resource settings.
+
+## v0.2.8: memory ceilings are not upfront RAM allocations
+
+`memory_limit_mib` remains the **maximum allowed resident worker memory**.
+It no longer requires that entire amount to be available at startup.
+Jobs start when the host has at least
+`reserve_memory_mib + 512 MiB` available, while the existing watchdog
+checks both actual process-group RSS and the Home Assistant free-RAM
+reserve throughout execution. A genuine 6 GiB allocation still needs
+enough physical host headroom, or the worker will be stopped to protect
+Home Assistant. The watchdog is best effort; it is not a cgroup quota.
+See [DOCS.md](DOCS.md) for details.
