@@ -108,15 +108,31 @@ class TrainerTests(unittest.TestCase):
         self.assertEqual(kwargs["env"]["HF_HUB_OFFLINE"], "1")
         self.assertNotIn("NEEDLE_API_KEY", kwargs["env"])
 
-    def test_training_fails_with_insufficient_spare_memory(self) -> None:
+    def test_training_fails_when_ha_reserve_plus_startup_margin_is_missing(self) -> None:
         self.save(mode="train", confirm_resource_use=True)
         with (
-            patch.object(runner, "available_ram_mib", return_value=6000),
+            patch.object(runner, "available_ram_mib", return_value=2400),
             patch.object(runner, "run_command") as execute,
         ):
             with self.assertRaisesRegex(RuntimeError, "Refusing train"):
                 self.invoke()
         execute.assert_not_called()
+
+    def test_high_memory_ceiling_does_not_block_small_real_usage(self) -> None:
+        self.save(mode="train", confirm_resource_use=True,
+                  memory_limit_mib=6144, reserve_memory_mib=2048)
+        self.work.mkdir()
+        (self.work / "needle3.safetensors").write_bytes(b"base")
+        (self.work / "train.jsonl").write_text("{}\\n")
+        with (
+            patch.object(runner, "available_ram_mib", return_value=4500),
+            patch.object(runner, "choose_cpu", return_value=3),
+            patch.object(runner, "run_command") as execute,
+        ):
+            self.assertEqual(self.invoke(), 0)
+        self.assertEqual(execute.call_count, 2)
+        self.assertEqual(execute.call_args.kwargs["max_ram_mib"], 6144)
+        self.assertEqual(execute.call_args.kwargs["reserve_memory_mib"], 2048)
 
     def test_invalid_configuration_never_launches_training(self) -> None:
         self.save(
