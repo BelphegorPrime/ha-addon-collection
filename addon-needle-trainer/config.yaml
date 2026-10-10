@@ -1,6 +1,6 @@
 name: "Needle Trainer (Experimental)"
 description: "Manual, low-priority CPU-only Needle LoRA experiments on your HA host"
-version: "0.2.7"
+version: "0.2.8"
 slug: "addon_needle_trainer"
 url: "https://github.com/BelphegorPrime/ha-addon-collection/tree/master/addon-needle-trainer"
 arch:
