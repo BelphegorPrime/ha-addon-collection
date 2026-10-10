@@ -336,7 +336,7 @@ class TrainerTests(unittest.TestCase):
     def test_calibrate_all_refuses_to_start_without_ram_reserve(self) -> None:
         self.save(mode="calibrate_all", confirm_resource_use=True)
         with (
-            patch.object(runner, "available_ram_mib", return_value=4000),
+            patch.object(runner, "available_ram_mib", return_value=2400),
             patch.object(runner, "run_command") as execute,
         ):
             with self.assertRaisesRegex(RuntimeError, "Refusing calibrate_all"):
@@ -415,7 +415,7 @@ class TrainerTests(unittest.TestCase):
     def test_evaluate_local_rejects_memory_pressure(self) -> None:
         self.save(mode="evaluate_local", confirm_resource_use=True)
         with (
-            patch.object(runner, "available_ram_mib", return_value=5000),
+            patch.object(runner, "available_ram_mib", return_value=2400),
             patch.object(runner, "run_command") as execute,
         ):
             with self.assertRaisesRegex(RuntimeError, "Refusing evaluate_local"):
