@@ -21,7 +21,7 @@ from experiment_pipeline import (
     validate_test_unsealing,
     verify_training_snapshot,
 )
-from resource_guard import run_bounded
+from resource_guard import STARTUP_HEADROOM_MIB, minimum_start_available_mib, run_bounded
 from training.workflow import LANGUAGES, SPLITS, load_scenarios, prepared_rows, write_jsonl
 
 OPTIONS = Path("/data/options.json")
@@ -228,11 +228,27 @@ def run(
         )
         return 0
 
-    if available_ram_mib() < ram + reserve:
+    # The RSS budget is a ceiling, NOT an allocation. Requiring the whole
+    # maximum free before starting blocks small exports unnecessarily.
+    # The subprocess watchdog enforces BOTH constraints continuously:
+    # process-group RSS <= cap; host MemAvailable >= HA reserve.
+    available = available_ram_mib()
+    minimum = minimum_start_available_mib(reserve)
+    if available < minimum:
         raise RuntimeError(
-            f"Refusing {mode}: need >= {ram + reserve} MiB MemAvailable "
-            f"({ram} MiB cap plus {reserve} MiB reserved for Home Assistant). "
-            "Choose a less busy time or use a separate training host."
+            f"Refusing {mode}: MemAvailable {available} MiB is below "
+            f"{minimum} MiB (Home Assistant reserve {reserve} MiB + "
+            f"{STARTUP_HEADROOM_MIB} MiB startup headroom). "
+            f"{ram} MiB is an RSS ceiling, not RAM preallocated at startup."
+        )
+    if available < ram + reserve:
+        print(
+            f"Memory note: MemAvailable {available} MiB, HA reserve "
+            f"{reserve} MiB, current usable headroom ~{available - reserve} "
+            f"MiB. The {ram} MiB RSS budget is only a ceiling, not guaranteed "
+            "capacity: the watchdog will stop the job if its RSS reaches "
+            "the ceiling or the HA reserve is breached.",
+            flush=True,
         )
     core = choose_cpu(cpu_core)
     env = dict(os.environ)

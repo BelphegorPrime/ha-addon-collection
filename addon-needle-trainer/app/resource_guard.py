@@ -15,6 +15,18 @@ import subprocess
 from pathlib import Path
 
 MIB = 1024 * 1024
+# A high RSS ceiling is not a pre-allocation. Require only enough memory to
+# safely *start*; continuously enforce the HA reserve and worker RSS at runtime.
+# 512 MiB is deliberately separate from the ongoing 2 GiB HA reserve.
+STARTUP_HEADROOM_MIB = 512
+
+
+def minimum_start_available_mib(reserve_memory_mib: int) -> int:
+    """Prevent starts in immediate memory pressure, independent of RSS cap."""
+    if reserve_memory_mib < 1024:
+        raise ValueError("Host reserve must be >=1024 MiB")
+    return reserve_memory_mib + STARTUP_HEADROOM_MIB
+
 
 
 def apply_limits(core: int) -> None:
@@ -98,6 +110,12 @@ def run_bounded(
     RSS polling cannot guarantee a strict instantaneous RAM ceiling. A
     memory.max cgroup controlled by the host is necessary for that. This
     watchdog avoids RLIMIT_AS failures while lowering overload risk.
+
+    A configured 6144 MiB budget is a *maximum RSS*, not a requirement for
+    6144 MiB free at launch. The worker may start with less, but if its real
+    usage drives host MemAvailable below the HA reserve it is stopped.
+    Consequently a job that truly uses the full budget may still be stopped
+    unless enough memory becomes available while it runs.
     """
     if not 2048 <= max_ram_mib <= 12288:
         raise ValueError("Memory budget must be 2048..12288 MiB")
@@ -105,9 +123,14 @@ def run_bounded(
         raise ValueError("Host reserve must be >=1024 MiB")
     if poll_seconds <= 0 or poll_seconds > 5:
         raise ValueError("Invalid memory polling interval")
-    if available_ram_mib() < max_ram_mib + reserve_memory_mib:
+    available = available_ram_mib()
+    minimum = minimum_start_available_mib(reserve_memory_mib)
+    if available < minimum:
         raise RuntimeError(
-            "Not enough available host memory for the job and HA reserve"
+            f"Not enough available host memory to safely start: "
+            f"MemAvailable {available} MiB < {minimum} MiB "
+            f"(HA reserve {reserve_memory_mib} MiB + "
+            f"startup headroom {STARTUP_HEADROOM_MIB} MiB)."
         )
 
     process = subprocess.Popen(

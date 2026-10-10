@@ -309,6 +309,51 @@ are fetched. No network access occurs during `train` or `calibrate`.
 
 
 
+## v0.2.8: lazy memory budget, HA reserve kept
+
+Previously each operation required `MemAvailable >= memory_limit_mib +
+reserve_memory_mib` **before** launching. This incorrectly treated the
+**maximum permitted physical RSS** as an up-front allocation, blocking
+small exports at a 6144 MiB cap unless 8192 MiB was already free.
+
+Now a manually triggered job requires only the Home Assistant reserve
+plus **512 MiB startup headroom** (for example 2048 + 512 = **2560 MiB**
+available before starting). The configured `memory_limit_mib` remains
+a **maximum process-group RSS**, not a reservation. Both guards continue
+to run in the background *while the job executes*:
+
+- Terminate the worker if observed process-group RSS reaches
+  `memory_limit_mib` (6 GiB if configured as 6144 MiB).
+- Terminate if the host's actual `MemAvailable` drops below
+  `reserve_memory_mib` (2 GiB if configured as 2048 MiB).
+
+If the initial host headroom (`MemAvailable - reserve`) is smaller than
+the configured RSS ceiling, the launcher logs a **warning** with that
+actual headroom. This is an allowed *attempt*, **not** a promise that the
+job can physically reach the ceiling. A process that actually needs
+6 GiB while other applications still consume memory cannot finish
+unless enough host RAM becomes available. The polling watchdog samples
+every 0.25 s and remains **best effort**, not a hard cgroup memory
+guarantee; OOM during a sudden large allocation remains possible.
+For high-risk HA installations use host cgroup limits or a separate
+training machine.
+
+No mode-specific cap reduction, swapping, auto-approval or changed
+confidence threshold is introduced. Keep your existing options, e.g.:
+
+```yaml
+mode: experiment_export
+confirm_resource_use: true
+memory_limit_mib: 6144
+reserve_memory_mib: 2048
+cpu_core: 3
+calibration_epochs: 2
+```
+
+If the failed export never created an experiment candidate, simply
+re-run `experiment_export` after updating the add-on. Do not retrain or
+repeat `prepare_experiment`.
+
 ## v0.2.7: isolated experiment training (after prepare_experiment)
 
 The first dataset preparation step (`mode: prepare_experiment`) already
