@@ -115,7 +115,7 @@ class ResourceGuardTests(unittest.TestCase):
 
     def test_insufficient_ram_refuses_to_launch_any_process(self) -> None:
         with (
-            patch.object(guard, "available_ram_mib", return_value=3000),
+            patch.object(guard, "available_ram_mib", return_value=2400),
             patch.object(guard.subprocess, "Popen") as popen,
         ):
             with self.assertRaisesRegex(RuntimeError, "Not enough"):
@@ -124,6 +124,52 @@ class ResourceGuardTests(unittest.TestCase):
                     reserve_memory_mib=2048, core=3,
                 )
         popen.assert_not_called()
+
+    def test_large_budget_is_not_required_free_at_start(self) -> None:
+        """Cap=6144 is permitted below 8192 available, when reserve holds."""
+        process = Mock()
+        process.pid = 1234
+        process.poll.side_effect = [None, 0]
+        process.wait.return_value = 0
+        process.returncode = 0
+        with (
+            patch.object(guard.subprocess, "Popen", return_value=process)
+            as launch,
+            patch.object(guard, "available_ram_mib",
+                         side_effect=[4500, 4300]),
+            patch.object(guard, "group_rss_mib", return_value=1126),
+        ):
+            guard.run_bounded(
+                ["needle", "finetune"], env={},
+                max_ram_mib=6144, reserve_memory_mib=2048, core=3,
+            )
+        launch.assert_called_once()
+
+    def test_large_budget_still_stops_when_HA_reserve_is_lost(self) -> None:
+        """A permitted launch is never permission to consume all host RAM."""
+        process = Mock()
+        process.pid = 1234
+        process.poll.return_value = None
+        with (
+            patch.object(guard.subprocess, "Popen", return_value=process)
+            as launch,
+            patch.object(guard, "available_ram_mib",
+                         side_effect=[4500, 1975]),
+            patch.object(guard, "group_rss_mib", return_value=2000),
+            patch.object(guard, "stop_group") as stop,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "reserve"):
+                guard.run_bounded(
+                    ["needle", "finetune"], env={},
+                    max_ram_mib=6144, reserve_memory_mib=2048, core=3,
+                )
+        launch.assert_called_once()
+        stop.assert_called_once_with(process)
+
+    def test_minimum_startup_headroom_is_independent_of_RSS_ceiling(self) -> None:
+        self.assertEqual(guard.minimum_start_available_mib(2048), 2560)
+        with self.assertRaisesRegex(ValueError, "reserve"):
+            guard.minimum_start_available_mib(500)
 
     def test_nonzero_native_exit_is_reported_without_fabrication(self) -> None:
         process = Mock()
